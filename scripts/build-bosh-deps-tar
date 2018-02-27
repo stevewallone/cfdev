@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+dir="$(cd "$( dirname $0)" && pwd)"
+output_dir="$dir"/../build
+
+set -ex
+
+while getopts "m:s:c:" arg; do
+  case $arg in
+    m) manifest="$OPTARG"
+      ;;
+  esac
+done
+
+releases_dir="$(mktemp -d)"
+mkdir -p "$releases_dir"
+trap cleanup EXIT
+
+if [[ -z $manifest ]]; then
+  echo "USAGE: build-cf-deps-tar -m <path-to-cf-manifest> -s <path-to-compilation> -c <path-to-cloud-config>"
+  exit 2
+fi
+
+if [[ -z "$BOSH_ENVIRONMENT" ]]; then
+  echo "ERROR: a bosh director is required to compile releases, please set your BOSH_* env variables"
+  exit 3
+fi
+
+cleanup () {
+  rm -rf "$releases_dir"
+}
+
+download_releases () {
+  pushd "$releases_dir"
+    rq -y <"$manifest" | jq '.releases[] | .url' | xargs wget
+  popd
+}
+
+tar_deps () {
+  cp "$manifest" "$releases_dir"
+  pushd "$releases_dir"
+    tar czf "$output_dir"/bosh.tgz *
+  popd
+}
+
+main () {
+  download_releases
+  tar_deps
+}
+
+main
