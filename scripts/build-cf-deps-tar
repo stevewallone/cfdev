@@ -2,7 +2,7 @@
 
 set -ex
 
-while getopts "m:s:c:" arg; do
+while getopts "m:c:" arg; do
   case $arg in
     m) manifest="$OPTARG"
       ;;
