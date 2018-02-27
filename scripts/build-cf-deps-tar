@@ -23,6 +23,7 @@ fi
 dir="$(cd "$( dirname $0)" && pwd)"
 output_dir="$dir"/../output
 releases_dir="$(mktemp -d)"
+mkdir -p "$output_dir"
 mkdir -p "$releases_dir"
 trap cleanup EXIT
 
