@@ -98,7 +98,6 @@ finalize_manifest () {
 }
 
 tar_deps () {
-  cp "$cloud_config" "$releases_dir"
   pushd "$releases_dir"
     tar czf "$output_dir"/bosh.tgz *
   popd
