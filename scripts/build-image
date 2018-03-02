@@ -19,19 +19,21 @@ if [[ -z $linuxkit ]]; then
 fi
 
 
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-linuxkit_dir=script_dir/../linuxkit
+script_dir="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
+output_dir="$script_dir"/../output
+linuxkit_dir="$script_dir"/../linuxkit
 
-"${script_dir}/../images/kernel/build.sh"
+mkdir -p "$output_dir"
 
 "$linuxkit" pkg build -hash dev "$linuxkit_dir"/pkg/bosh-lite-routing
 "$linuxkit" pkg build -hash dev "$linuxkit_dir"/pkg/expose-multiple-ports
-"$linuxkt" pkg build -hash dev "$linuxkit_dir"/pkg/garden-runc
+"$linuxkit" pkg build -hash dev "$linuxkit_dir"/pkg/garden-runc
 "$linuxkit" pkg build -hash dev "$linuxkit_dir"/pkg/openssl
 
 "$linuxkit" build \
  -disable-content-trust \
  -name cfdev \
  -format iso-efi \
+ -dir "$output_dir" \
  "$linuxkit_dir"/base.yml \
- "$linuxkit_dir"/garden.yml
+ "$linuxkit_dir"/garden.yml \
