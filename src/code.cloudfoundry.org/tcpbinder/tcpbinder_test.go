@@ -39,44 +39,80 @@ var _ = Describe("Binder test", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		var version uint32 = 22
-		conn.Write([]byte("VMN3T"))
-		binary.Write(conn, binary.LittleEndian, version)
-		conn.Write([]byte("0123456789012345678901234567890123456789"))
+		Expect(sendHello(conn, "VMN3T", 22, "0123456789012345678901234567890123456789")).To(Succeed())
+		Expect(recvHello(conn)).To(Equal("CFD3V"))
+		Expect(sendBindAddr(conn, "10.245.0.2", 1888)).To(Succeed())
+		ln, err := recvBindAddr(conn, "10.245.0.2", 1888)
+		Expect(err).NotTo(HaveOccurred())
 
-		bytes := make([]byte, 49, 49)
-		Expect(io.ReadFull(conn, bytes)).To(Equal(49))
-		Expect(bytes[0:5]).To(Equal([]byte("CFD3V")))
-
-		conn.Write([]byte{0x6})
-		ip := []byte(net.ParseIP("10.245.0.2").To4())
-		conn.Write(append([]byte{}, ip[3], ip[2], ip[1], ip[0]))
-		var port uint16 = 1888
-		binary.Write(conn, binary.LittleEndian, port)
-
-		b := make([]byte, 8, 8)
-		oob := make([]byte, 16, 16)
-		_, _, _, _, err = conn.ReadMsgUnix(b, oob)
-		Expect(err).NotTo(HaveOccurred())
-		scms, err := syscall.ParseSocketControlMessage(oob)
-		Expect(err).NotTo(HaveOccurred())
-		fds, err := syscall.ParseUnixRights(&scms[0])
-		Expect(err).NotTo(HaveOccurred())
-		file := os.NewFile(uintptr(fds[0]), "tcp:10.245.0.2:1888")
-		ln, err := net.FileListener(file)
-		Expect(err).NotTo(HaveOccurred())
 		msg := "Hello from test"
-		go func() {
-			defer GinkgoRecover()
-			wconn, err := net.Dial("tcp", "10.245.0.2:1888")
-			Expect(err).NotTo(HaveOccurred())
-			wconn.Write([]byte(msg))
-		}()
-		conn2, err := ln.Accept()
-		Expect(err).NotTo(HaveOccurred())
-		received := make([]byte, len(msg), len(msg))
-		_, err = conn2.Read(received)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(received).To(Equal([]byte(msg)))
+		go sendMessage("10.245.0.2", 1888, msg)
+		Expect(readFromListener(ln)).To(Equal(msg))
 	})
 })
+
+func sendHello(conn *net.UnixConn, id string, version uint32, sha1 string) error {
+	if _, err := conn.Write([]byte(id)); err != nil {
+		return err
+	}
+	if err := binary.Write(conn, binary.LittleEndian, version); err != nil {
+		return err
+	}
+	_, err := conn.Write([]byte(sha1))
+	return err
+}
+
+func recvHello(conn *net.UnixConn) (string, error) {
+	bytes := make([]byte, 49, 49)
+	if n, err := io.ReadFull(conn, bytes); err != nil {
+		return "", err
+	} else if n != 49 {
+		return "", fmt.Errorf("Expected to read 49 bytes, read %d", n)
+	}
+	return string(bytes[0:5]), nil
+}
+
+func sendBindAddr(conn *net.UnixConn, ip string, port uint16) error {
+	conn.Write([]byte{0x6})
+	b := []byte(net.ParseIP(ip).To4())
+	conn.Write(append([]byte{}, b[3], b[2], b[1], b[0]))
+	return binary.Write(conn, binary.LittleEndian, port)
+}
+
+func recvBindAddr(conn *net.UnixConn, ip string, port uint16) (ln net.Listener, err error) {
+	b := make([]byte, 8, 8)
+	oob := make([]byte, 16, 16)
+	if _, _, _, _, err := conn.ReadMsgUnix(b, oob); err != nil {
+		return nil, err
+	}
+	scms, err := syscall.ParseSocketControlMessage(oob)
+	if err != nil {
+		return nil, err
+	}
+	fds, err := syscall.ParseUnixRights(&scms[0])
+	if err != nil {
+		return nil, err
+	}
+	file := os.NewFile(uintptr(fds[0]), fmt.Sprintf("tcp:%s:%d"))
+	return net.FileListener(file)
+}
+
+func sendMessage(host string, port uint16, mesg string) {
+	defer GinkgoRecover()
+	wconn, err := net.Dial("tcp", "10.245.0.2:1888")
+	Expect(err).NotTo(HaveOccurred())
+	wconn.Write([]byte(mesg))
+}
+
+func readFromListener(ln net.Listener) (string, error) {
+	conn, err := ln.Accept()
+	if err != nil {
+		return "", err
+	}
+	received := make([]byte, 15, 15)
+	_, err = conn.Read(received)
+	if err != nil {
+		return "", err
+	}
+	return string(received), nil
+}
