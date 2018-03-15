@@ -27,10 +27,9 @@ var _ = Describe("Binder test", func() {
 	})
 
 	AfterEach(func() {
-		session.Terminate()
+		gexec.Start(exec.Command("sudo", "--non-interactive", "kill", fmt.Sprintf("%d", session.Command.Process.Pid)), GinkgoWriter, GinkgoWriter)
+		gexec.KillAndWait()
 		gexec.CleanupBuildArtifacts()
-		// TODO something else
-		gexec.Start(exec.Command("sudo", "rm", "/var/tmp/com.docker.vmnetd.socket"), GinkgoWriter, GinkgoWriter)
 	})
 
 	It("binds ports", func() {
@@ -52,34 +51,28 @@ var _ = Describe("Binder test", func() {
 		conn.Write([]byte{0x6})
 		ip := []byte(net.ParseIP("10.245.0.2").To4())
 		conn.Write(append([]byte{}, ip[3], ip[2], ip[1], ip[0]))
-		var port uint16 = 1890
+		var port uint16 = 1888
 		binary.Write(conn, binary.LittleEndian, port)
 
 		b := make([]byte, 8, 8)
 		oob := make([]byte, 16, 16)
-		n, oobn, flags, addr, err := conn.ReadMsgUnix(b, oob)
-		fmt.Println(n, oobn, flags, addr, err)
-		fmt.Println(b, oob)
+		_, _, _, _, err = conn.ReadMsgUnix(b, oob)
+		Expect(err).NotTo(HaveOccurred())
 		scms, err := syscall.ParseSocketControlMessage(oob)
 		Expect(err).NotTo(HaveOccurred())
-		fmt.Println(scms[0])
 		fds, err := syscall.ParseUnixRights(&scms[0])
 		Expect(err).NotTo(HaveOccurred())
-		file := os.NewFile(uintptr(fds[0]), "tcp:10.245.0.2:1890")
-		fmt.Println("file:", file)
+		file := os.NewFile(uintptr(fds[0]), "tcp:10.245.0.2:1888")
 		ln, err := net.FileListener(file)
 		Expect(err).NotTo(HaveOccurred())
 		msg := "Hello from test"
 		go func() {
 			defer GinkgoRecover()
-			fmt.Println("dialing")
-			wconn, err := net.Dial("tcp", "10.245.0.2:1890")
+			wconn, err := net.Dial("tcp", "10.245.0.2:1888")
 			Expect(err).NotTo(HaveOccurred())
-			fmt.Println("writing")
 			wconn.Write([]byte(msg))
 		}()
 		conn2, err := ln.Accept()
-		fmt.Println("accepted")
 		Expect(err).NotTo(HaveOccurred())
 		received := make([]byte, len(msg), len(msg))
 		_, err = conn2.Read(received)
