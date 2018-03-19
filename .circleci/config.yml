@@ -8,3 +8,5 @@ jobs:
     steps:
       - checkout
       - run: echo "$(sw_vers)"
+      - run: echo "$(which hyperkit)"
+      - run: echo "$(hyperkit -h)"
