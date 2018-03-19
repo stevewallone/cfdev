@@ -10,5 +10,5 @@ jobs:
       - run: brew tap cloudfoundry/tap
       - run: brew install cf-cli
       - run: echo "$(sw_vers)"
-      - run: cf install-plugin testbinary
+      - run: yes y | cf install-plugin testbinary -f
       - run: cf dev start
