@@ -7,6 +7,7 @@ jobs:
     working_directory: ~/cfdev
     steps:
       - checkout
+      - run: brew install cf-cli
       - run: echo "$(sw_vers)"
-      - run: echo "$(which hyperkit)"
-      - run: echo "$(hyperkit -h)"
+      - run: cf install-plugin testbinary
+      - run: cf dev start
