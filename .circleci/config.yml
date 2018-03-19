@@ -2,10 +2,11 @@
 version: 2
 jobs:
   build:
-    docker:
-      - image: circleci/golang:1.9
+    macos:
+      xcode: "9.0"
     working_directory: ~/cfdev
     steps:
       - checkout
       - run: git submodule update --init --recursive
-      - run: go build code.cloudfoundry.org/cfdev
+      - run: echo 'export GOPATH=$HOME/cfdev' >> $BASH_ENV
+      - run: echo 'sw_vers'
