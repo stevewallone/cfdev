@@ -6,10 +6,6 @@ jobs:
       - image: circleci/golang:1.9
     working_directory: ~/cfdev
     steps:
-      - add_ssh_keys:
-        fingerprints:
-          - "cc:48:b7:50:f3:ae:78:be:12:92:a0:a0:38:d2:7c:34"
       - checkout
       - run: git submodule update --init --recursive
-      - run: echo 'export GOPATH=$HOME/cfdev' >> $BASH_ENV
       - run: go build code.cloudfoundry.org/cfdev
