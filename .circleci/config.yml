@@ -7,6 +7,4 @@ jobs:
     working_directory: ~/cfdev
     steps:
       - checkout
-      - run: git submodule update --init --recursive
-      - run: echo 'export GOPATH=$HOME/cfdev' >> $BASH_ENV
-      - run: echo 'sw_vers'
+      - run: echo '$(sw_vers)'
