@@ -6,7 +6,7 @@ jobs:
       xcode: "9.0"
     working_directory: ~/cfdev
     steps:
-      - checkout
+      - run: brew tap cloudfoundry/tap
       - run: brew install cf-cli
       - run: echo "$(sw_vers)"
       - run: cf install-plugin testbinary
