@@ -47,6 +47,8 @@ var _ = Describe("hyperkit lifecycle", func() {
 		//SetupDependencies(cacheDir)
 		os.Setenv("CF_HOME", cfHome)
 		os.Setenv("CFDEV_HOME", cfdevHome)
+
+		fmt.Println("CF DEV HOME : %v", cfdevHome)
 		//os.Setenv("CFDEV_SKIP_ASSET_CHECK", "true")
 
 		fmt.Println("CF DEV HOME : %v", cfdevHome)
