@@ -68,7 +68,7 @@ var _ = Describe("hyperkit lifecycle", func() {
 			syscall.Kill(int(-vpnPid), syscall.SIGKILL)
 		}
 
-		os.RemoveAll(cfdevHome)
+		//os.RemoveAll(cfdevHome)
 		RemoveIPAliases(BoshDirectorIP, CFRouterIP)
 
 		session := cf.Cf("uninstall-plugin", "cfdev")
