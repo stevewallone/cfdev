@@ -16,6 +16,8 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
+const SOCK = "/var/tmp/cfdev.socket"
+
 var _ = Describe("Binder test", func() {
 	var session *gexec.Session
 	BeforeSuite(func() {
@@ -23,7 +25,7 @@ var _ = Describe("Binder test", func() {
 		Expect(err).NotTo(HaveOccurred())
 		session, err = gexec.Start(exec.Command("sudo", "--non-interactive", bin), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(session).Should(gbytes.Say("Listening on socket at /var/tmp/com.docker.vmnetd.socket"))
+		Eventually(session).Should(gbytes.Say("Listening on socket at /var/tmp/cfdev.socket"))
 	})
 
 	AfterSuite(func() {
@@ -37,7 +39,7 @@ var _ = Describe("Binder test", func() {
 		var err error
 		conn, err = net.DialUnix("unix", nil, &net.UnixAddr{
 			Net:  "unix",
-			Name: "/var/tmp/com.docker.vmnetd.socket",
+			Name: SOCK,
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -45,24 +47,45 @@ var _ = Describe("Binder test", func() {
 		conn.Close()
 	})
 
-	It("binds ports", func() {
+	It("binds ports on bosh ip", func() {
 		Expect(sendHello(conn, "VMN3T", 22, "0123456789012345678901234567890123456789")).To(Succeed())
 		Expect(recvHello(conn)).To(Equal("CFD3V"))
-		Expect(sendBindAddr(conn, "10.245.0.2", 1888)).To(Succeed())
-		ln, _, err := recvBindAddr(conn, "10.245.0.2", 1888)
+		Expect(sendBindAddr(conn, "10.245.0.2", 1777)).To(Succeed())
+		ln, _, err := recvBindAddr(conn, "10.245.0.2", 1777)
 		Expect(err).NotTo(HaveOccurred())
 		defer ln.Close()
 
 		msg := "Hello from test"
-		go sendMessage("10.245.0.2", 1888, msg)
+		go sendMessage("10.245.0.2:1777", msg)
 		Expect(readFromListener(ln)).To(Equal(msg))
+	})
+
+	It("binds ports on gorouter ip", func() {
+		Expect(sendHello(conn, "VMN3T", 22, "0123456789012345678901234567890123456789")).To(Succeed())
+		Expect(recvHello(conn)).To(Equal("CFD3V"))
+		Expect(sendBindAddr(conn, "10.144.0.34", 1888)).To(Succeed())
+		ln, _, err := recvBindAddr(conn, "10.144.0.34", 1888)
+		Expect(err).NotTo(HaveOccurred())
+		defer ln.Close()
+
+		msg := "Hello from test"
+		go sendMessage("10.144.0.34:1888", msg)
+		Expect(readFromListener(ln)).To(Equal(msg))
+	})
+
+	It("refuses to bind ports on other interfaces", func() {
+		Expect(sendHello(conn, "VMN3T", 22, "0123456789012345678901234567890123456789")).To(Succeed())
+		Expect(recvHello(conn)).To(Equal("CFD3V"))
+		Expect(sendBindAddr(conn, "127.0.0.1", 1888)).To(Succeed())
+		_, b, _ := recvBindAddr(conn, "10.245.0.2", 1888)
+		Expect(b[0]).To(Equal(uint8(71)))
 	})
 
 	Context("binding to a bound port", func() {
 		var prior net.Listener
 		BeforeEach(func() {
 			var err error
-			prior, err = net.Listen("tcp", "10.245.0.2:1888")
+			prior, err = net.Listen("tcp", "10.245.0.2:1999")
 			Expect(err).NotTo(HaveOccurred())
 		})
 		AfterEach(func() { prior.Close() })
@@ -70,9 +93,8 @@ var _ = Describe("Binder test", func() {
 		It("sends an error", func() {
 			Expect(sendHello(conn, "VMN3T", 22, "0123456789012345678901234567890123456789")).To(Succeed())
 			Expect(recvHello(conn)).To(Equal("CFD3V"))
-			Expect(sendBindAddr(conn, "10.245.0.2", 1888)).To(Succeed())
-			_, b, _ := recvBindAddr(conn, "10.245.0.2", 1888)
-			fmt.Println("msg received", b)
+			Expect(sendBindAddr(conn, "10.245.0.2", 1999)).To(Succeed())
+			_, b, _ := recvBindAddr(conn, "10.245.0.2", 1999)
 			Expect(b[0]).To(Equal(uint8(48)))
 		})
 	})
@@ -100,10 +122,13 @@ func recvHello(conn *net.UnixConn) (string, error) {
 }
 
 func sendBindAddr(conn *net.UnixConn, ip string, port uint16) error {
-	conn.Write([]byte{0x6})
+	var instruction uint8 = 6
+	conn.Write([]byte{instruction})
 	b := []byte(net.ParseIP(ip).To4())
 	conn.Write(append([]byte{}, b[3], b[2], b[1], b[0]))
-	return binary.Write(conn, binary.LittleEndian, port)
+	binary.Write(conn, binary.LittleEndian, port)
+	_, err := conn.Write([]byte{0x0})
+	return err
 }
 
 func recvBindAddr(conn *net.UnixConn, ip string, port uint16) (net.Listener, []byte, error) {
@@ -123,15 +148,17 @@ func recvBindAddr(conn *net.UnixConn, ip string, port uint16) (net.Listener, []b
 	if err != nil {
 		return nil, b, err
 	}
-	file := os.NewFile(uintptr(fds[0]), fmt.Sprintf("tcp:%s:%d"))
+	syscall.Listen(fds[0], 65536)
+	defer syscall.Close(fds[0])
+	file := os.NewFile(uintptr(fds[0]), fmt.Sprintf("tcp:%s:%d", ip, port))
 	defer file.Close()
 	ln, err := net.FileListener(file)
 	return ln, b, err
 }
 
-func sendMessage(host string, port uint16, mesg string) {
+func sendMessage(address string, mesg string) {
 	defer GinkgoRecover()
-	wconn, err := net.Dial("tcp", "10.245.0.2:1888")
+	wconn, err := net.Dial("tcp", address)
 	Expect(err).NotTo(HaveOccurred())
 	defer wconn.Close()
 	wconn.Write([]byte(mesg))
