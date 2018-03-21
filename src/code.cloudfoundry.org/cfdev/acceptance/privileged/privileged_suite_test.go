@@ -6,6 +6,8 @@ import (
 
 	"testing"
 
+	"os"
+
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -21,7 +23,7 @@ var _ = BeforeSuite(func() {
 	if pluginPath == "" {
 		var err error
 		pluginPath, err = gexec.Build("code.cloudfoundry.org/cfdev")
-		Expect(err).ShouldNotHello, world!(HaveOccurred())
+		Expect(err).ShouldNot(HaveOccurred())
 	}
 })
 
