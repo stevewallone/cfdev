@@ -41,10 +41,10 @@ var _ = Describe("hyperkit lifecycle", func() {
 		linuxkitPidPath = filepath.Join(stateDir, "linuxkit.pid")
 		vpnkitPidPath = filepath.Join(stateDir, "vpnkit.pid")
 
-		SetupDependencies(cacheDir)
+		//SetupDependencies(cacheDir)
 		os.Setenv("CF_HOME", cfHome)
 		os.Setenv("CFDEV_HOME", cfdevHome)
-		os.Setenv("CFDEV_SKIP_ASSET_CHECK", "true")
+		//os.Setenv("CFDEV_SKIP_ASSET_CHECK", "true")
 
 		fmt.Println("CF DEV HOME : %v", cfdevHome)
 

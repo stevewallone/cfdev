@@ -13,9 +13,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/cloudfoundry-incubator/cf-test-helpers/cf"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/cloudfoundry-incubator/cf-test-helpers/cf"
 )
 
 var _ = Describe("hyperkit start", func() {
@@ -40,12 +40,11 @@ var _ = Describe("hyperkit start", func() {
 		Eventually(session).Should(gbytes.Say("cfdev"))
 		Eventually(session).Should(gexec.Exit(0))
 
-
 		cacheDir = filepath.Join(cfdevHome, "cache")
 		stateDir = filepath.Join(cfdevHome, "state")
 		linuxkitPidPath = filepath.Join(stateDir, "linuxkit.pid")
 
-		SetupDependencies(cacheDir)
+		//SetupDependencies(cacheDir)
 	})
 
 	AfterEach(func() {
