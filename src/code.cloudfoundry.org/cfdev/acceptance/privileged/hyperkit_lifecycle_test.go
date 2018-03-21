@@ -15,8 +15,11 @@ import (
 	"io/ioutil"
 	"syscall"
 
+	"time"
+
 	. "code.cloudfoundry.org/cfdev/acceptance"
 	"github.com/cloudfoundry-incubator/cf-test-helpers/cf"
+	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("hyperkit lifecycle", func() {
@@ -74,9 +77,10 @@ var _ = Describe("hyperkit lifecycle", func() {
 
 	It("runs the entire vm lifecycle", func() {
 		session := cf.Cf("dev", "start")
+		Eventually(session, 10*time.Minute).Should(gbytes.Say("Starting VPNKit"))
 
 		By("settingup VPNKit dependencies")
-		Eventually(filepath.Join(cfdevHome, "http_proxy.json"))
+		Eventually(filepath.Join(cfdevHome, "http_proxy.json"), 10, 1).Should(BeAnExistingFile())
 
 		Eventually(vpnkitPidPath, 10, 1).Should(BeAnExistingFile())
 		Eventually(linuxkitPidPath, 10, 1).Should(BeAnExistingFile())
