@@ -12,10 +12,11 @@ import (
 
 	//"syscall"
 
-	. "code.cloudfoundry.org/cfdev/acceptance"
-	"github.com/cloudfoundry-incubator/cf-test-helpers/cf"
 	"io/ioutil"
 	"syscall"
+
+	. "code.cloudfoundry.org/cfdev/acceptance"
+	"github.com/cloudfoundry-incubator/cf-test-helpers/cf"
 )
 
 var _ = Describe("hyperkit lifecycle", func() {
@@ -40,10 +41,10 @@ var _ = Describe("hyperkit lifecycle", func() {
 		linuxkitPidPath = filepath.Join(stateDir, "linuxkit.pid")
 		vpnkitPidPath = filepath.Join(stateDir, "vpnkit.pid")
 
-		SetupDependencies(cacheDir)
+		//SetupDependencies(cacheDir)
 		os.Setenv("CF_HOME", cfHome)
 		os.Setenv("CFDEV_HOME", cfdevHome)
-		os.Setenv("CFDEV_SKIP_ASSET_CHECK", "true")
+		//os.Setenv("CFDEV_SKIP_ASSET_CHECK", "true")
 
 		session := cf.Cf("install-plugin", pluginPath, "-f")
 		Eventually(session).Should(gexec.Exit(0))
