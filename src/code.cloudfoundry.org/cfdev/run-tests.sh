@@ -11,7 +11,7 @@ extend_sudo_timeout() {
 
 disable_sudo() {
     if [ ! -z "${NONPRIV_USER:-}" ] ; then
-        chmod go+w $GOPATH
+        chmod -R go+w $GOPATH
         sudo -E su $NONPRIV_USER -c "$*"
     else
         sudo -E -k "$@"
