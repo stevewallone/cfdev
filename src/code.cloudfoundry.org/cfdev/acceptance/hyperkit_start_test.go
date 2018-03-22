@@ -33,7 +33,6 @@ var _ = Describe("hyperkit start", func() {
 		cfdevHome = CreateTempCFDevHomeDir()
 		os.Setenv("CF_HOME", cfHome)
 		os.Setenv("CFDEV_HOME", cfdevHome)
-		os.Setenv("CFDEV_SKIP_ASSET_CHECK", "true")
 		session := cf.Cf("install-plugin", pluginPath, "-f")
 		Eventually(session).Should(gexec.Exit(0))
 		session = cf.Cf("plugins")
@@ -44,7 +43,10 @@ var _ = Describe("hyperkit start", func() {
 		stateDir = filepath.Join(cfdevHome, "state")
 		linuxkitPidPath = filepath.Join(stateDir, "linuxkit.pid")
 
-		//SetupDependencies(cacheDir)
+		if os.Getenv("CFDEV_PLUGIN_PATH") == "" {
+			SetupDependencies(cacheDir)
+			os.Setenv("CFDEV_SKIP_ASSET_CHECK", "true")
+		}
 	})
 
 	AfterEach(func() {
