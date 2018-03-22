@@ -44,12 +44,12 @@ var _ = Describe("hyperkit lifecycle", func() {
 		linuxkitPidPath = filepath.Join(stateDir, "linuxkit.pid")
 		vpnkitPidPath = filepath.Join(stateDir, "vpnkit.pid")
 
-		//SetupDependencies(cacheDir)
+		if os.Getenv("CFDEV_PLUGIN_PATH") == "" {
+			SetupDependencies(cacheDir)
+			os.Setenv("CFDEV_SKIP_ASSET_CHECK", "true")
+		}
 		os.Setenv("CF_HOME", cfHome)
 		os.Setenv("CFDEV_HOME", cfdevHome)
-
-		fmt.Println("CF DEV HOME : %v", cfdevHome)
-		//os.Setenv("CFDEV_SKIP_ASSET_CHECK", "true")
 
 		session := cf.Cf("install-plugin", pluginPath, "-f")
 		Eventually(session).Should(gexec.Exit(0))
@@ -70,7 +70,7 @@ var _ = Describe("hyperkit lifecycle", func() {
 			syscall.Kill(int(-vpnPid), syscall.SIGKILL)
 		}
 
-		//os.RemoveAll(cfdevHome)
+		os.RemoveAll(cfdevHome)
 		RemoveIPAliases(BoshDirectorIP, CFRouterIP)
 
 		session := cf.Cf("uninstall-plugin", "cfdev")
