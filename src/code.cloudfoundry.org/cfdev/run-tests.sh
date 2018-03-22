@@ -10,8 +10,13 @@ extend_sudo_timeout() {
 }
 
 disable_sudo() {
-    set +e
-    sudo -K
+    if [ -z "${NONPRIV_USER:-}" ] ; then
+        sudo su $NONPRIV_USER
+    else
+        set +e
+        sudo -K
+        eval "$1"
+    fi
 }
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -30,6 +35,4 @@ pushd acceptance/privileged > /dev/null
 popd > /dev/null
 
 # Invalidate sudo credentials
-disable_sudo
-
-ginkgo -r -skipPackage privileged "$@"
+disable_sudo "ginkgo -r -skipPackage privileged $@"
