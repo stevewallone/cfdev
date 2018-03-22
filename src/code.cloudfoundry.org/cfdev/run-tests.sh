@@ -11,7 +11,9 @@ extend_sudo_timeout() {
 
 disable_sudo() {
     if [ ! -z "${NONPRIV_USER:-}" ] ; then
-        GOPKG=/tmp/cfdev.$$ sudo -E su $NONPRIV_USER -c "$*"
+        (export GOPKG=$(mktemp -d)
+        trap "rm -rf $GOPKG" EXIT
+        sudo -E su $NONPRIV_USER -c "$*")
     else
         sudo -E -k "$@"
     fi
