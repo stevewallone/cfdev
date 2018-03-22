@@ -10,12 +10,10 @@ extend_sudo_timeout() {
 }
 
 disable_sudo() {
-    if [ -z "${NONPRIV_USER:-}" ] ; then
-        sudo su $NONPRIV_USER
+    if [ ! -z "${NONPRIV_USER:-}" ] ; then
+        sudo -E su $NONPRIV_USER -c "$*"
     else
-        set +e
-        sudo -K
-        eval "$1"
+        sudo -E -k "$@"
     fi
 }
 
@@ -35,4 +33,4 @@ pushd acceptance/privileged > /dev/null
 popd > /dev/null
 
 # Invalidate sudo credentials
-disable_sudo "ginkgo -r -skipPackage privileged $@"
+disable_sudo ginkgo -r -skipPackage privileged "$@"
