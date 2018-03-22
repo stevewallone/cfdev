@@ -11,8 +11,7 @@ extend_sudo_timeout() {
 
 disable_sudo() {
     if [ ! -z "${NONPRIV_USER:-}" ] ; then
-        chmod -R go+w $GOPATH/pkg
-        sudo -E su $NONPRIV_USER -c "$*"
+        GOPKG=/tmp/cfdev.$$ sudo -E su $NONPRIV_USER -c "$*"
     else
         sudo -E -k "$@"
     fi
@@ -22,7 +21,6 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 echo "The tests require sudo password to be set"
 sudo echo "thanks!"
-trap disable_sudo EXIT
 
 # We need to extend sudo timeout for our acceptance test to run
 extend_sudo_timeout &
