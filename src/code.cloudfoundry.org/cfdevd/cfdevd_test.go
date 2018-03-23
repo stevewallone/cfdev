@@ -18,10 +18,10 @@ import (
 
 const SOCK = "/var/tmp/cfdev.socket"
 
-var _ = Describe("Binder test", func() {
+var _ = Describe("cfdevd test", func() {
 	var session *gexec.Session
 	BeforeSuite(func() {
-		bin, err := gexec.Build("code.cloudfoundry.org/tcpbinder")
+		bin, err := gexec.Build("code.cloudfoundry.org/cfdevd")
 		Expect(err).NotTo(HaveOccurred())
 		session, err = gexec.Start(exec.Command("sudo", "--non-interactive", bin), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())

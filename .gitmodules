@@ -46,3 +46,6 @@
 [submodule "src/code.cloudfoundry.org/cfdev/vendor/github.com/cloudfoundry-incubator/cf-test-helpers"]
 	path = src/code.cloudfoundry.org/cfdev/vendor/github.com/cloudfoundry-incubator/cf-test-helpers
 	url = git@github.com:cloudfoundry-incubator/cf-test-helpers.git
+[submodule "src/code.cloudfoundry.org/cfdev/vendor/github.com/go-plist"]
+	path = src/code.cloudfoundry.org/cfdev/vendor/github.com/go-plist
+	url = git@github.com:DHowett/go-plist.git
