@@ -1,11 +1,11 @@
 package launchd
 
 import (
+	"io"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"text/template"
-	"os"
-	"io"
-	"os/exec"
 )
 
 type DaemonSpec struct {
@@ -30,8 +30,29 @@ func (l *Launchd) AddDaemon(spec DaemonSpec, executable string) error {
 	return l.load(plistPath)
 }
 
+func (l *Launchd) RemoveDaemon(spec DaemonSpec) error {
+	plistPath := filepath.Join(l.PListDir, spec.Label+".plist")
+	if err := l.unload(plistPath); err != nil {
+		return err
+	}
+	if err := os.Remove(plistPath); err != nil {
+		return err
+	}
+	if err := os.Remove(spec.Program); err != nil {
+		return err
+	}
+	return l.unload(plistPath)
+}
+
 func (l *Launchd) load(plistPath string) error {
 	cmd := exec.Command("launchctl", "load", plistPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func (l *Launchd) unload(plistPath string) error {
+	cmd := exec.Command("launchctl", "unload", plistPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
