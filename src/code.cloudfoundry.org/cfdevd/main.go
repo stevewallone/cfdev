@@ -8,7 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"code.cloudfoundry.org/tcpbinder/cmd"
+	"code.cloudfoundry.org/cfdevd/cmd"
+	"code.cloudfoundry.org/cfdevd/launchd"
 )
 
 const Sock = "/var/tmp/cfdev.socket"
@@ -51,7 +52,41 @@ func registerSignalHandler(listener net.Listener) {
 	}(sigc, listener)
 }
 
-func main() {
+func install(prog string) {
+	lctl := launchd.Launchd{
+		PListDir: "/Library/LaunchDaemons",
+	}
+	cfdevdSpec := launchd.DaemonSpec{
+		Label:   "org.cloudfoundry.cfdevd",
+		Program: "/Library/PrivilegedHelperTools/org.cloudfoundry.cfdevd",
+		ProgramArguments: []string{
+			prog,
+		},
+		RunAtLoad: true,
+	}
+	if err := lctl.AddDaemon(cfdevdSpec, prog); err != nil {
+		fmt.Println("Failed to install cfdevd: ", err)
+	}
+}
+
+func uninstall(prog string) {
+	lctl := launchd.Launchd{
+		PListDir: "/Library/LaunchDaemons",
+	}
+	cfdevdSpec := launchd.DaemonSpec{
+		Label:   "org.cloudfoundry.cfdevd",
+		Program: "/Library/PrivilegedHelperTools/org.cloudfoundry.cfdevd",
+		ProgramArguments: []string{
+			prog,
+		},
+		RunAtLoad: true,
+	}
+	if err := lctl.RemoveDaemon(cfdevdSpec); err != nil {
+		fmt.Println("Failed to uninstall cfdevd: ", err)
+	}
+}
+
+func run() {
 	listener, err := listen()
 	if err != nil {
 		log.Fatal("failed to listen on socket %s", Sock)
@@ -65,5 +100,21 @@ func main() {
 		}
 		defer conn.Close()
 		go handleRequest(conn)
+	}
+}
+
+func main() {
+	fmt.Println(os.Args)
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "install":
+			install(os.Args[0])
+		case "uninstall":
+			uninstall(os.Args[0])
+		default:
+			log.Fatal("unrecognized command ", os.Args[1])
+		}
+	} else {
+		run()
 	}
 }

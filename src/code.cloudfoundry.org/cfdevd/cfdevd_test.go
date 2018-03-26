@@ -12,24 +12,43 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
 const SOCK = "/var/tmp/cfdev.socket"
 
 var _ = Describe("cfdevd test", func() {
-	var session *gexec.Session
+	var bin string
+
 	BeforeSuite(func() {
-		bin, err := gexec.Build("code.cloudfoundry.org/cfdevd")
+		var err error
+		session, err := gexec.Start(exec.Command("sudo", "--non-interactive", "launchctl", "list"), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
-		session, err = gexec.Start(exec.Command("sudo", "--non-interactive", bin), GinkgoWriter, GinkgoWriter)
+		Eventually(session).Should(gexec.Exit(0))
+		Expect(string(session.Out.Contents())).ShouldNot(ContainSubstring("org.cloudfoundry.cfdevd"))
+
+		bin, err = gexec.Build("code.cloudfoundry.org/cfdevd")
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(session).Should(gbytes.Say("Listening on socket at /var/tmp/cfdev.socket"))
+		session, err = gexec.Start(exec.Command("sudo", "--non-interactive", bin, "install"), GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(session).Should(gexec.Exit(0))
+
+		session, err = gexec.Start(exec.Command("sudo", "--non-interactive", "launchctl", "list"), GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(session).Should(gexec.Exit(0))
+		Expect(string(session.Out.Contents())).Should(ContainSubstring("org.cloudfoundry.cfdevd"))
 	})
 
 	AfterSuite(func() {
-		gexec.Start(exec.Command("sudo", "--non-interactive", "kill", fmt.Sprintf("%d", session.Command.Process.Pid)), GinkgoWriter, GinkgoWriter)
+		session, err := gexec.Start(exec.Command("sudo", "--non-interactive", bin, "uninstall"), GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(session).Should(gexec.Exit(0))
+
+		session, err = gexec.Start(exec.Command("sudo", "--non-interactive", "launchctl", "list"), GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(session).Should(gexec.Exit(0))
+		Expect(string(session.Out.Contents())).ShouldNot(ContainSubstring("org.cloudfoundry.cfdevd"))
+
 		gexec.KillAndWait()
 		gexec.CleanupBuildArtifacts()
 	})
