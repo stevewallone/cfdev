@@ -15,7 +15,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-const SOCK = "/var/tmp/cfdev.socket"
+const SOCK = "/var/tmp/cfdevd.socket"
 
 var _ = Describe("cfdevd test", func() {
 	var bin string

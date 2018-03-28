@@ -38,10 +38,7 @@ func (l *Launchd) RemoveDaemon(spec DaemonSpec) error {
 	if err := os.Remove(plistPath); err != nil {
 		return err
 	}
-	if err := os.Remove(spec.Program); err != nil {
-		return err
-	}
-	return l.unload(plistPath)
+	return os.Remove(spec.Program)
 }
 
 func (l *Launchd) load(plistPath string) error {
@@ -64,7 +61,7 @@ func (l *Launchd) copyExecutable(src string, dest string) error {
 		return err
 	}
 
-	if err = os.Chmod(dest, 0700); err != nil {
+	if err = os.Chmod(dest, 0744); err != nil {
 		return err
 	}
 

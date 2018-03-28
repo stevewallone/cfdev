@@ -10,8 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
-	//"syscall"
-
 	"io/ioutil"
 	"syscall"
 

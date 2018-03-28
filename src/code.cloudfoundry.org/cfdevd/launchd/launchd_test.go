@@ -10,30 +10,30 @@ import (
 	"code.cloudfoundry.org/cfdevd/launchd"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("launchd", func() {
 	Describe("AddDaemon", func() {
 		var plistDir string
+		var plistPath string
 		var binDir string
 		var lnchd launchd.Launchd
 
 		BeforeEach(func() {
 			plistDir, _ = ioutil.TempDir("", "plist")
+			plistPath = filepath.Join(plistDir, "/org.some-org.some-daemon-name.plist")
 			binDir, _ = ioutil.TempDir("", "bin")
 			lnchd = launchd.Launchd{
 				PListDir: plistDir,
 			}
 			ioutil.WriteFile(filepath.Join(binDir, "some-executable"), []byte(`some-content`), 0777)
-			session, err := gexec.Start(exec.Command("launchctl", "list"), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(0))
-			Expect(session.Out.Contents()).ShouldNot(ContainSubstring("org.some-org.some-daemon-name"))
+			Expect(loadedDaemons()).ShouldNot(ContainSubstring("org.some-org.some-daemon-name"))
 		})
 
 		AfterEach(func() {
+			exec.Command("launchctl", "unload", plistPath).Run()
+			Expect(loadedDaemons()).ShouldNot(ContainSubstring("org.some-org.some-daemon-name"))
 			Expect(os.RemoveAll(plistDir)).To(Succeed())
 			Expect(os.RemoveAll(binDir)).To(Succeed())
 		})
@@ -47,8 +47,9 @@ var _ = Describe("launchd", func() {
 				RunAtLoad:        true,
 			}
 
-			Expect(lnchd.AddDaemon(spec, filepath.Join(binDir, "some-executable"))).To(Succeed())
-			plistPath := filepath.Join(plistDir, "/org.some-org.some-daemon-name.plist")
+			executableToInstall := filepath.Join(binDir, "some-executable")
+			Expect(lnchd.AddDaemon(spec, executableToInstall)).To(Succeed())
+
 			Expect(plistPath).To(BeAnExistingFile())
 			plistFile, err := os.Open(plistPath)
 			Expect(err).NotTo(HaveOccurred())
@@ -72,7 +73,7 @@ var _ = Describe("launchd", func() {
   <true/>
 </dict>
 </plist>
-`, filepath.Join(binDir, "org.some-org.some-daemon-executable"), filepath.Join(binDir, "org.some-org.some-daemon-executable"))))
+`, installationPath, installationPath)))
 			plistFileInfo, err := plistFile.Stat()
 			Expect(err).ToNot(HaveOccurred())
 			var expectedPlistMode os.FileMode = 0644
@@ -82,15 +83,11 @@ var _ = Describe("launchd", func() {
 			installedBinary, err := os.Open(installationPath)
 			Expect(err).NotTo(HaveOccurred())
 			binFileInfo, err := installedBinary.Stat()
-			var expectedBinMode os.FileMode = 0700
+			var expectedBinMode os.FileMode = 0744
 			Expect(binFileInfo.Mode()).To(Equal(expectedBinMode))
 			contents, err := ioutil.ReadAll(installedBinary)
 			Expect(string(contents)).To(Equal("some-content"))
-
-			session, err := gexec.Start(exec.Command("launchctl", "list"), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			defer Expect(exec.Command("launchctl", "unload", plistPath).Run()).To(Succeed())
-			Eventually(session).Should(gbytes.Say("org.some-org.some-daemon-name"))
+			Expect(loadedDaemons()).Should(ContainSubstring("org.some-org.some-daemon-name"))
 		})
 	})
 
@@ -128,10 +125,7 @@ var _ = Describe("launchd", func() {
 				PListDir: plistDir,
 			}
 			Expect(exec.Command("launchctl", "load", plistPath).Run()).To(Succeed())
-			session, err := gexec.Start(exec.Command("launchctl", "list"), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(0))
-			Expect(string(session.Out.Contents())).Should(ContainSubstring("org.some-org.some-daemon-to-remove"))
+			Expect(loadedDaemons()).Should(ContainSubstring("org.some-org.some-daemon-to-remove"))
 		})
 
 		AfterEach(func() {
@@ -148,12 +142,16 @@ var _ = Describe("launchd", func() {
 			}
 
 			Expect(lnchd.RemoveDaemon(spec)).To(Succeed())
-			session, err := gexec.Start(exec.Command("launchctl", "list"), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(0))
-			Expect(string(session.Out.Contents())).ShouldNot(ContainSubstring("org.some-org.some-daemon-to-remove"))
+			Expect(loadedDaemons()).ShouldNot(ContainSubstring("org.some-org.some-daemon-to-remove"))
 			Expect(plistPath).NotTo(BeAnExistingFile())
 			Expect(binPath).NotTo(BeAnExistingFile())
 		})
 	})
 })
+
+func loadedDaemons() string {
+	session, err := gexec.Start(exec.Command("launchctl", "list"), GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(session).Should(gexec.Exit(0))
+	return string(session.Out.Contents())
+}

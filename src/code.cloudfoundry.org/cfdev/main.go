@@ -8,6 +8,7 @@ import (
 
 	"code.cloudfoundry.org/cfdev/cmd"
 	"code.cloudfoundry.org/cfdev/config"
+	"code.cloudfoundry.org/cfdev/process"
 	"code.cloudfoundry.org/cli/cf/terminal"
 	"code.cloudfoundry.org/cli/cf/trace"
 	"code.cloudfoundry.org/cli/plugin"
@@ -59,6 +60,15 @@ type Plugin struct {
 
 func (p *Plugin) Run(connection plugin.CliConnection, args []string) {
 	if args[0] == "CLI-MESSAGE-UNINSTALL" {
+		stop := &cmd.Stop{
+			Config: p.Config,
+		}
+		if err := stop.Run([]string{}); err != nil {
+			p.UI.Say("Error stopping cfdev: %s", err)
+		}
+		if err := process.UninstallCFDevD(p.Config.CacheDir); err != nil {
+			p.UI.Say("Error uninstalling some components of cfdev: %s", err)
+		}
 		return
 	}
 	p.execute(args[1:])

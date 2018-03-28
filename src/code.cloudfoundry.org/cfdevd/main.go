@@ -12,7 +12,7 @@ import (
 	"code.cloudfoundry.org/cfdevd/launchd"
 )
 
-const Sock = "/var/tmp/cfdev.socket"
+const Sock = "/var/tmp/cfdevd.socket"
 
 func listen() (*net.UnixListener, error) {
 	listener, err := net.ListenUnix("unix", &net.UnixAddr{
@@ -52,19 +52,20 @@ func registerSignalHandler(listener net.Listener) {
 	}(sigc, listener)
 }
 
-func install(prog string) {
+func install(programSrc string) {
 	lctl := launchd.Launchd{
 		PListDir: "/Library/LaunchDaemons",
 	}
+	program := "/Library/PrivilegedHelperTools/org.cloudfoundry.cfdevd"
 	cfdevdSpec := launchd.DaemonSpec{
 		Label:   "org.cloudfoundry.cfdevd",
-		Program: "/Library/PrivilegedHelperTools/org.cloudfoundry.cfdevd",
+		Program: program,
 		ProgramArguments: []string{
-			prog,
+			program,
 		},
 		RunAtLoad: true,
 	}
-	if err := lctl.AddDaemon(cfdevdSpec, prog); err != nil {
+	if err := lctl.AddDaemon(cfdevdSpec, programSrc); err != nil {
 		fmt.Println("Failed to install cfdevd: ", err)
 	}
 }
