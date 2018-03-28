@@ -83,7 +83,7 @@ func (s *Start) Run(args []string) error {
 		return err
 	}
 
-	if !process.IsCFDevDInstalled(s.Config.CFDevDSocketPath, s.Config.CFDevDInstallationPath, s.Config.Dependencies.Items[7].MD5) {
+	if !process.IsCFDevDInstalled(s.Config.CFDevDSocketPath, s.Config.CFDevDInstallationPath, s.Config.Dependencies.Lookup("cfdevd").MD5) {
 		if err := process.InstallCFDevD(s.Config.CacheDir); err != nil {
 			return err
 		}
