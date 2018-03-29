@@ -13,6 +13,9 @@ type DaemonSpec struct {
 	Program          string
 	ProgramArguments []string
 	RunAtLoad        bool
+	Sockets          map[string]string
+	StdoutPath       string
+	StderrPath       string
 }
 
 type Launchd struct {
@@ -94,9 +97,34 @@ var plistTemplate = `<?xml version="1.0" encoding="UTF-8"?>
   <string>{{.Program}}</string>
   <key>ProgramArguments</key>
   <array>
-{{range .ProgramArguments}}    <string>{{.}}</string>{{"\n"}}{{end}}  </array>
+  {{range .ProgramArguments}}
+    <string>{{.}}</string>
+	{{end}}
+  </array>
   <key>RunAtLoad</key>
   <{{.RunAtLoad}}/>
+  {{if .Sockets}}
+  <key>Sockets</key>
+  <dict>
+	  {{range $name, $path := .Sockets}}
+    <key>{{$name}}</key>
+    <dict>
+      <key>SockPathMode</key>
+      <integer>438</integer>
+      <key>SockPathName</key>
+      <string>{{$path}}</string>
+    </dict>
+		{{end}}
+  </dict>
+  {{end}}
+  {{if .StdoutPath}}
+	<key>StandardOutPath</key>
+	<string>{{.StdoutPath}}</string>
+  {{end}}
+  {{if .StderrPath}}
+	<key>StandardErrorPath</key>
+	<string>{{.StderrPath}}</string>
+  {{end}}
 </dict>
 </plist>
 `

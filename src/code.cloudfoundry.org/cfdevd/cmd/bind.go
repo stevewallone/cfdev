@@ -92,11 +92,13 @@ func (b *BindCommand) response(file *os.File, err error) ([]byte, []byte) {
 			if sysErr, ok := opErr.Err.(*os.SyscallError); ok {
 				switch sysErr.Err {
 				case syscall.EADDRINUSE:
-					fmt.Println("Failed to Bind: address in use ", b.Addr)
+					fmt.Println("Failed to Bind: address in use", b.Addr)
 					msg[0] = ERROR_IN_USE
 				case syscall.EADDRNOTAVAIL:
+					fmt.Println("Failed to Bind: address not available", b.Addr)
 					msg[0] = ERROR_NOT_AVAIL
 				default:
+					fmt.Println("Failed to Bind: unknown error", err)
 					msg[0] = ERROR_UNKNOWN
 				}
 			}

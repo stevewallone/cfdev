@@ -55,7 +55,7 @@ var _ = Describe("launchd", func() {
 			Expect(err).NotTo(HaveOccurred())
 			plistData, err := ioutil.ReadAll(plistFile)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(plistData)).To(Equal(fmt.Sprintf(
+			Expect(string(plistData)).To(MatchXML(fmt.Sprintf(
 				`<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -88,6 +88,54 @@ var _ = Describe("launchd", func() {
 			contents, err := ioutil.ReadAll(installedBinary)
 			Expect(string(contents)).To(Equal("some-content"))
 			Expect(loadedDaemons()).Should(ContainSubstring("org.some-org.some-daemon-name"))
+		})
+
+		It("sets unix socket listeners on plist", func() {
+			installationPath := filepath.Join(binDir, "org.some-org.some-daemon-executable")
+			spec := launchd.DaemonSpec{
+				Label:            "org.some-org.some-daemon-name",
+				Program:          installationPath,
+				ProgramArguments: []string{installationPath, "some-arg"},
+				RunAtLoad:        true,
+				Sockets: map[string]string{
+					"CoolSocket": "/var/tmp/my.cool.socket",
+				},
+			}
+
+			executableToInstall := filepath.Join(binDir, "some-executable")
+			Expect(lnchd.AddDaemon(spec, executableToInstall)).To(Succeed())
+
+			plistData, err := ioutil.ReadFile(plistPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(plistData)).To(MatchXML(fmt.Sprintf(
+				`<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>org.some-org.some-daemon-name</string>
+  <key>Program</key>
+  <string>%s</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>%s</string>
+    <string>some-arg</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>Sockets</key>
+  <dict>
+    <key>CoolSocket</key>
+    <dict>
+      <key>SockPathMode</key>
+      <integer>438</integer>
+      <key>SockPathName</key>
+      <string>/var/tmp/my.cool.socket</string>
+    </dict>
+  </dict>
+</dict>
+</plist>
+`, installationPath, installationPath)))
 		})
 	})
 

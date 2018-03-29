@@ -12,20 +12,7 @@ import (
 	"code.cloudfoundry.org/cfdevd/launchd"
 )
 
-const Sock = "/var/tmp/cfdevd.socket"
-
-func listen() (*net.UnixListener, error) {
-	listener, err := net.ListenUnix("unix", &net.UnixAddr{
-		Net:  "unix",
-		Name: Sock,
-	})
-	if err != nil {
-		return nil, err
-	}
-	os.Chmod(Sock, 0666)
-	fmt.Println("Listening on socket at", Sock)
-	return listener, err
-}
+const SockName = "ListenSocket"
 
 func handleRequest(conn *net.UnixConn) {
 	if err := doHandshake(conn); err != nil {
@@ -40,16 +27,14 @@ func handleRequest(conn *net.UnixConn) {
 	command.Execute(conn)
 }
 
-func registerSignalHandler(listener net.Listener) {
+func registerSignalHandler() {
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
-	go func(c chan os.Signal, listener net.Listener) {
+	go func(c chan os.Signal) {
 		sig := <-c
 		log.Printf("Caught signal %s: shutting down.", sig)
-		listener.Close()
-		os.Remove(Sock)
 		os.Exit(0)
-	}(sigc, listener)
+	}(sigc)
 }
 
 func install(programSrc string) {
@@ -63,7 +48,12 @@ func install(programSrc string) {
 		ProgramArguments: []string{
 			program,
 		},
-		RunAtLoad: true,
+		RunAtLoad: false,
+		Sockets: map[string]string{
+			SockName: "/var/tmp/cfdevd.socket",
+		},
+		StdoutPath: "/var/tmp/cfdevd.stdout.log",
+		StderrPath: "/var/tmp/cfdevd.stderr.log",
 	}
 	if err := lctl.AddDaemon(cfdevdSpec, programSrc); err != nil {
 		fmt.Println("Failed to install cfdevd: ", err)
@@ -88,12 +78,15 @@ func uninstall(prog string) {
 }
 
 func run() {
-	listener, err := listen()
-	if err != nil {
-		log.Fatal("failed to listen on socket %s", Sock)
+	registerSignalHandler()
+	listeners, err := launchd.Listeners(SockName)
+	if err != nil || len(listeners) != 1 {
+		log.Fatal("Failed to obtain socket from launchd")
 	}
-	defer listener.Close()
-	registerSignalHandler(listener)
+	listener, ok := listeners[0].(*net.UnixListener)
+	if !ok {
+		log.Fatal("Failed to cast listener to unix listener")
+	}
 	for {
 		conn, err := listener.AcceptUnix()
 		if err != nil {

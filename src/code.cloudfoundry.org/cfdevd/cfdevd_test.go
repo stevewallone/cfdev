@@ -2,7 +2,6 @@ package main_test
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -26,6 +25,12 @@ var _ = Describe("cfdevd test", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(session).Should(gexec.Exit(0))
 		Expect(string(session.Out.Contents())).ShouldNot(ContainSubstring("org.cloudfoundry.cfdevd"))
+
+		session, err = gexec.Start(exec.Command("ifconfig"), GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(session).Should(gexec.Exit(0))
+		Expect(string(session.Out.Contents())).Should(ContainSubstring("10.245.0.2"))
+		Expect(string(session.Out.Contents())).Should(ContainSubstring("10.144.0.34"))
 
 		bin, err = gexec.Build("code.cloudfoundry.org/cfdevd")
 		Expect(err).NotTo(HaveOccurred())
@@ -157,7 +162,7 @@ func recvBindAddr(conn *net.UnixConn, ip string, port uint16) (net.Listener, []b
 		return nil, b, err
 	}
 	if b[0] != 0 {
-		return nil, b, errors.New("Look at b")
+		return nil, b, fmt.Errorf("Look at b: %d, %+v", b[0], b)
 	}
 	scms, err := syscall.ParseSocketControlMessage(oob)
 	if err != nil {
