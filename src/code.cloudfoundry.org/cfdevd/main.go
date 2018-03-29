@@ -67,10 +67,6 @@ func uninstall(prog string) {
 	cfdevdSpec := launchd.DaemonSpec{
 		Label:   "org.cloudfoundry.cfdevd",
 		Program: "/Library/PrivilegedHelperTools/org.cloudfoundry.cfdevd",
-		ProgramArguments: []string{
-			prog,
-		},
-		RunAtLoad: true,
 	}
 	if err := lctl.RemoveDaemon(cfdevdSpec); err != nil {
 		fmt.Println("Failed to uninstall cfdevd: ", err)
