@@ -45,11 +45,21 @@ var _ = Describe("cfdevd test", func() {
 	})
 
 	AfterSuite(func() {
-		session, err := gexec.Start(exec.Command("sudo", "--non-interactive", bin, "uninstall"), GinkgoWriter, GinkgoWriter)
+		conn, err := net.DialUnix("unix", nil, &net.UnixAddr{
+			Net:  "unix",
+			Name: SOCK,
+		})
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(session).Should(gexec.Exit(0))
+		defer conn.Close()
 
-		session, err = gexec.Start(exec.Command("sudo", "--non-interactive", "launchctl", "list"), GinkgoWriter, GinkgoWriter)
+		Expect(sendHello(conn, "VMN3T", 22, "0123456789012345678901234567890123456789")).To(Succeed())
+		Expect(recvHello(conn)).To(Equal("CFD3V"))
+		Expect(sendUninstall(conn)).To(Succeed())
+		errorCode, err := recvUninstall(conn)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(errorCode).To(Equal(0))
+
+		session, err := gexec.Start(exec.Command("sudo", "--non-interactive", "launchctl", "list"), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(session).Should(gexec.Exit(0))
 		Expect(string(session.Out.Contents())).ShouldNot(ContainSubstring("org.cloudfoundry.cfdevd"))
@@ -123,6 +133,18 @@ var _ = Describe("cfdevd test", func() {
 		})
 	})
 })
+
+func recvUninstall(conn *net.UnixConn) (byte, error) {
+	data := make([]byte, 1, 1)
+	_, err := io.ReadFull(conn, data)
+	return data[0], err
+}
+
+func sendUninstall(conn *net.UnixConn) error {
+	var instruction uint8 = 1
+	_, err := conn.Write([]byte{instruction})
+	return err
+}
 
 func sendHello(conn *net.UnixConn, id string, version uint32, sha1 string) error {
 	if _, err := conn.Write([]byte(id)); err != nil {

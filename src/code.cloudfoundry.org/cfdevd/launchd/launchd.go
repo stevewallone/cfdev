@@ -22,6 +22,12 @@ type Launchd struct {
 	PListDir string
 }
 
+func New() *Launchd {
+	return &Launchd{
+		PListDir: "/Library/LaunchDaemons",
+	}
+}
+
 func (l *Launchd) AddDaemon(spec DaemonSpec, executable string) error {
 	if err := l.copyExecutable(executable, spec.Program); err != nil {
 		return err

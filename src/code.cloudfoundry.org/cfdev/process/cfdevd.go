@@ -38,13 +38,3 @@ func InstallCFDevD(cacheDir string) error {
 	cmd.Stdin = os.Stdin
 	return cmd.Run()
 }
-
-func UninstallCFDevD(cacheDir string) error {
-	cfdevdPath := filepath.Join(cacheDir, "cfdevd")
-	fmt.Println("Uninstalling networking components (requires root privileges)")
-	cmd := exec.Command("sudo", "--stdin", cfdevdPath, "uninstall")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	return cmd.Run()
-}

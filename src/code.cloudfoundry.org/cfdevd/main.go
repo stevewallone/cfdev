@@ -15,7 +15,8 @@ import (
 const SockName = "ListenSocket"
 
 func handleRequest(conn *net.UnixConn) {
-	if err := doHandshake(conn); err != nil {
+	magic, err := doHandshake(conn)
+	if err != nil {
 		fmt.Println("Handshake Error: ", err)
 		return
 	}
@@ -38,9 +39,7 @@ func registerSignalHandler() {
 }
 
 func install(programSrc string) {
-	lctl := launchd.Launchd{
-		PListDir: "/Library/LaunchDaemons",
-	}
+	lctl := launchd.New()
 	program := "/Library/PrivilegedHelperTools/org.cloudfoundry.cfdevd"
 	cfdevdSpec := launchd.DaemonSpec{
 		Label:   "org.cloudfoundry.cfdevd",
@@ -61,9 +60,7 @@ func install(programSrc string) {
 }
 
 func uninstall(prog string) {
-	lctl := launchd.Launchd{
-		PListDir: "/Library/LaunchDaemons",
-	}
+	lctl := launchd.New()
 	cfdevdSpec := launchd.DaemonSpec{
 		Label:   "org.cloudfoundry.cfdevd",
 		Program: "/Library/PrivilegedHelperTools/org.cloudfoundry.cfdevd",

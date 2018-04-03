@@ -49,3 +49,6 @@
 [submodule "src/code.cloudfoundry.org/cfdev/vendor/github.com/go-plist"]
 	path = src/code.cloudfoundry.org/cfdev/vendor/github.com/go-plist
 	url = git@github.com:DHowett/go-plist.git
+[submodule "src/github.com/golang/mock"]
+	path = src/github.com/golang/mock
+	url = git@github.com:golang/mock.git

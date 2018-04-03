@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"syscall"
+	"io"
 )
 
 const BOSH_IP = "10.245.0.2"
@@ -35,7 +36,7 @@ func (b *BindCommand) isIPAllowed(ip net.IP) bool {
 	return false
 }
 
-func UnmarshalBindCommand(conn net.Conn) (*BindCommand, error) {
+func UnmarshalBindCommand(conn io.Reader) (*BindCommand, error) {
 	ip := make([]byte, 4, 4)
 	var port uint16
 	var isUDP bool

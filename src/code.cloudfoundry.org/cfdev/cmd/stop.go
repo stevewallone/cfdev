@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"encoding/binary"
 	"fmt"
+	"net"
 	"sync"
 	"syscall"
 
@@ -16,7 +18,7 @@ type Stop struct {
 func (s *Stop) Run(args []string) error {
 	var reterr error
 	var all sync.WaitGroup
-	all.Add(3)
+	all.Add(4)
 
 	go func() {
 		defer all.Done()
@@ -34,6 +36,36 @@ func (s *Stop) Run(args []string) error {
 		defer all.Done()
 		if err := process.SignalAndCleanup(s.Config.HyperkitPidFile, s.Config.CFDevHome, syscall.SIGKILL); err != nil {
 			reterr = fmt.Errorf("failed to terminate hyperkit: %s", err)
+		}
+	}()
+	go func() {
+		defer all.Done()
+		command := []byte{uint8(1)}
+		handshake := append([]byte("CFD3V"), make([]byte, 44, 44)...)
+		conn, err := net.Dial("unix", s.Config.CFDevDSocketPath)
+		if err != nil {
+			// cfdevd is not running-- do nothing
+			return
+		}
+		if err := binary.Write(conn, binary.LittleEndian, handshake); err != nil {
+			reterr = err
+			return
+		}
+		if err := binary.Read(conn, binary.LittleEndian, handshake); err != nil {
+			reterr = err
+			return
+		}
+		if err := binary.Write(conn, binary.LittleEndian, command); err != nil {
+			reterr = err
+			return
+		}
+		errorCode := make([]byte, 1, 1)
+		if err := binary.Read(conn, binary.LittleEndian, errorCode); err != nil {
+			reterr = err
+			return
+		}
+		if errorCode[0] != 0 {
+			reterr = fmt.Errorf("failed to uninstall cfdevd: errorcode: %d", errorCode[0])
 		}
 	}()
 

@@ -28,11 +28,11 @@ func marshalHandshake(hsk Handshake) []byte {
 	return append(data, []byte(hsk.Commit)...)
 }
 
-func doHandshake(conn net.Conn) error {
+func doHandshake(conn net.Conn) (string, error) {
 	init := make([]byte, 49, 49)
 	_, err := io.ReadFull(conn, init)
 	if err != nil {
-		return err
+		return "", err
 	}
 	handshake := unmarshalHandshake(init)
 	fmt.Printf("connection received from client: Name: %s, Version: %d, Commit: %s \n",
@@ -48,5 +48,5 @@ func doHandshake(conn net.Conn) error {
 			Commit:  "0123456789012345678901234567890123456789",
 		},
 	))
-	return nil
+	return handshake.Magic, nil
 }
