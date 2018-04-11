@@ -100,6 +100,8 @@ func (p *Plugin) execute(args []string) {
 		p.usage()
 	}
 
+	cfanalytics.PromptOptIn(p.Config, p.UI)
+
 	var command Command
 	switch args[0] {
 	case "start":
@@ -126,6 +128,11 @@ func (p *Plugin) execute(args []string) {
 		}
 	case "catalog":
 		command = &cmd.Catalog{
+			UI:     p.UI,
+			Config: p.Config,
+		}
+	case "telemetry":
+		command = &cmd.Telemetry{
 			UI:     p.UI,
 			Config: p.Config,
 		}
