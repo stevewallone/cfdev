@@ -1,7 +1,6 @@
 package cfanalytics
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,6 +14,7 @@ import (
 
 type UI interface {
 	Say(message string, args ...interface{})
+	Ask(prompt string) (answer string)
 }
 
 func PromptOptIn(conf config.Config, ui UI) error {
@@ -29,14 +29,12 @@ func PromptOptIn(conf config.Config, ui UI) error {
 
 	contents, _ := ioutil.ReadFile(path.Join(conf.AnalyticsDir, conf.AnalyticsFile))
 	if string(contents[:]) == "" {
-		ui.Say(`
+		response := ui.Ask(`
 CF Dev collects anonymous usage data to help us improve your user experience. We intend to share these anonymous usage analytics with user community by publishing quarterly reports at :
 
 https://github.com/pivotal-cf/cfdev/wiki/Telemetry
 
 Are you ok with CF Dev periodically capturing anonymized telemetry [Y/n]?`)
-		reader := bufio.NewReader(os.Stdin)
-		response, _ := reader.ReadString('\n')
 		err = SetTelemetryState(response, conf)
 		if err != nil {
 			return err

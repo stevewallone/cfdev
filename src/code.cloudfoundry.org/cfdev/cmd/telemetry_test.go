@@ -20,11 +20,13 @@ func (m *MockUI) Say(message string, args ...interface{}) {
 }
 
 var _ = Describe("Telemetry", func() {
-	var tmpDir string
-	var mockUI MockUI
-	var conf config.Config
-	var analyticsFilePath string
-	var telCmd cmd.Telemetry
+	var (
+		tmpDir            string
+		mockUI            MockUI
+		conf              config.Config
+		analyticsFilePath string
+		telCmd            cmd.Telemetry
+	)
 
 	BeforeEach(func() {
 		mockUI = MockUI{

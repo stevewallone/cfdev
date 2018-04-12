@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"code.cloudfoundry.org/cfdev/cfanalytics"
 	"code.cloudfoundry.org/cfdev/cmd"
 	"code.cloudfoundry.org/cfdev/config"
 	"code.cloudfoundry.org/cli/cf/terminal"

@@ -16,8 +16,13 @@ type MockUI struct {
 	WasCalled bool
 }
 
-func (m *MockUI) Say(message string, args ...interface{}) {
-	if message == `
+type UI interface {
+	Say(message string, args ...interface{})
+	Ask(prompt string) (answer string)
+}
+
+func (m *MockUI) Ask(prompt string) (answer string) {
+	if prompt == `
 CF Dev collects anonymous usage data to help us improve your user experience. We intend to share these anonymous usage analytics with user community by publishing quarterly reports at :
 
 https://github.com/pivotal-cf/cfdev/wiki/Telemetry
@@ -25,13 +30,20 @@ https://github.com/pivotal-cf/cfdev/wiki/Telemetry
 Are you ok with CF Dev periodically capturing anonymized telemetry [Y/n]?` {
 		m.WasCalled = true
 	}
+
+	return "yes"
+}
+
+func (m *MockUI) Say(message string, args ...interface{}) {
 }
 
 var _ = Describe("Optin", func() {
-	var tmpDir string
-	var mockUI MockUI
-	var conf config.Config
-	var analyticsFilePath string
+	var (
+		tmpDir            string
+		mockUI            MockUI
+		conf              config.Config
+		analyticsFilePath string
+	)
 
 	BeforeEach(func() {
 		mockUI = MockUI{
