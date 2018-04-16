@@ -2,21 +2,29 @@
 
 set -ex
 
-while getopts "m:" arg; do
+while getopts "m:r:" arg; do
   case $arg in
     m) manifest="$OPTARG"
+      ;;
+    r) runtime="$OPTARG"
       ;;
   esac
 done
 
-if [[ -z $manifest ]]; then
-  echo "USAGE: build-bosh-deps-tar -m <path-to-bosh-manifest>"
+if [[ -z $manifest || -z $runtime ]]; then
+  echo "USAGE: build-bosh-deps-tar -m <path-to-bosh-manifest> -r <path-to-runtime-config>"
   exit 2
 fi
 if [[ ! -f $manifest ]]; then
   echo "ERROR: manifest $manifest does not exist"
   exit 2
 fi
+
+if [[ ! -f $runtime ]]; then
+  echo "ERROR: runtime-config $runtime does not exist"
+  exit 2
+fi
+
 manifest="$(cd "$(dirname "$manifest")"; pwd)/$(basename "$manifest")"
 
 if [[ -z "$BOSH_ENVIRONMENT" ]]; then
@@ -85,7 +93,7 @@ EOF
 )"
 
 compile_releases () {
-    releases_to_compile="$(rq -y <"$manifest" | jq '[.releases[] | select(.url | contains("compiled") | not)]')"
+    releases_to_compile="$(rq -y <"$1" | jq '[.releases[] | select(.url | contains("compiled") | not)]')"
     compilation_manifest="$(echo "$compilation_manifest_template" | rq -y | jq ".releases=$releases_to_compile" | rq -Y)"
     bosh upload-stemcell "https://s3.amazonaws.com/bosh-gce-light-stemcells/light-bosh-stemcell-$(stemcell_version)-google-kvm-ubuntu-trusty-go_agent.tgz"
     bosh -n deploy -d bosh <(echo "$compilation_manifest")
@@ -104,6 +112,7 @@ finalize_manifest () {
 }
 
 tar_deps () {
+  cp "$runtime" "$releases_dir"
   pushd "$releases_dir"
     tar czf "$output_dir"/bosh.tgz *
   popd
@@ -112,7 +121,8 @@ tar_deps () {
 main () {
   download_warden_stemcell
   download_compiled_releases
-  compile_releases
+  compile_releases "$manifest"
+  compile_releases "$runtime"
   finalize_manifest
   tar_deps
 }
