@@ -29,13 +29,13 @@ echo "The tests require sudo password to be set"
 sudo echo "thanks!"
 
 # We need to extend sudo timeout for our acceptance test to run
-extend_sudo_timeout &
+# extend_sudo_timeout &
 
 cd "$script_dir"
 
-pushd acceptance/privileged > /dev/null
-    ginkgo "$@"
-popd > /dev/null
+# pushd acceptance/privileged > /dev/null
+#     ginkgo "$@"
+# popd > /dev/null
 
 # Invalidate sudo credentials
 disable_sudo ginkgo -r -skipPackage privileged "$@"
