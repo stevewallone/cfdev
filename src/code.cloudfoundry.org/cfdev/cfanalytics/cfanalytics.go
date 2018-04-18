@@ -22,14 +22,14 @@ const START_END = "start_end"
 const STOP = "stop"
 const ERROR = "error"
 
-func TrackEvent(event string, trackType string, client analytics.Client) error {
+func TrackEvent(event string, data interface{}, client analytics.Client) error {
 	uuid, _ := GetUUID()
 
 	var analyticsEvent = &AnalyticsEvent{
 		SegClient: client,
 		Event:     event,
 		UserId:    uuid,
-		Type:      trackType,
+		Data:      data,
 		OS:        runtime.GOOS,
 		Version:   "0.0.2",
 	}

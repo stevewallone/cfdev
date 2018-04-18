@@ -43,7 +43,7 @@ type Start struct {
 }
 
 func (s *Start) Run(args []string) error {
-	cfanalytics.TrackEvent(cfanalytics.START_BEGIN, "cf", s.AnalyticsClient)
+	cfanalytics.TrackEvent(cfanalytics.START_BEGIN, map[string]string{"type": "cf"}, s.AnalyticsClient)
 
 	startCmd := flag.NewFlagSet("start", flag.ExitOnError)
 	registriesFlag := startCmd.String("r", "", "docker registries that skip ssl validation - ie. host:port,host2:port2")
@@ -162,7 +162,7 @@ Admin user => Email: admin / Password: admin
 Regular user => Email: user / Password: pass
 `)
 
-	cfanalytics.TrackEvent(cfanalytics.START_END, "cf", s.AnalyticsClient)
+	cfanalytics.TrackEvent(cfanalytics.START_END, nil, s.AnalyticsClient)
 
 	return nil
 }

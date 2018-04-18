@@ -6,7 +6,7 @@ import (
 	"code.cloudfoundry.org/cfdev/cfanalytics"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"gopkg.in/segmentio/analytics-go.v3"
+	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
 type MockClient struct {
@@ -35,7 +35,7 @@ var _ = Describe("Startevent", func() {
 		expectProperties := analytics.NewProperties()
 		expectProperties.Set("os", runtime.GOOS)
 		expectProperties.Set("version", "2.0")
-		expectProperties.Set("type", "cf")
+		expectProperties.Set("data", map[string]string{"type": "cf"})
 
 		expected := analytics.Track{
 			UserId:     "my user id",
@@ -47,7 +47,7 @@ var _ = Describe("Startevent", func() {
 			SegClient: &mockClient,
 			Event:     "start",
 			UserId:    "my user id",
-			Type:      "cf",
+			Data:      map[string]string{"type": "cf"},
 			OS:        runtime.GOOS,
 			Version:   "2.0",
 		}
