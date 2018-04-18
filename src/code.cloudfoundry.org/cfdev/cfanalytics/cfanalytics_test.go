@@ -6,9 +6,6 @@ import (
 
 	"path"
 
-	"bytes"
-	"net"
-
 	"encoding/json"
 
 	"code.cloudfoundry.org/cfdev/cfanalytics"
@@ -164,27 +161,6 @@ var _ = Describe("Optin", func() {
 
 			content, _ = ioutil.ReadFile(analyticsFilePath)
 			Expect(string(content)).To(Equal("optin"))
-		})
-	})
-
-	Context("GetUUID", func() {
-		It("should return non-empty string", func() {
-			Expect(cfanalytics.GetUUID()).ToNot(BeEmpty())
-		})
-
-		It("should not return unhashed mac address", func() {
-			var addr string
-			interfaces, err := net.Interfaces()
-			if err == nil {
-				for _, i := range interfaces {
-					if i.Flags&net.FlagUp != 0 && bytes.Compare(i.HardwareAddr, nil) != 0 {
-						addr = i.HardwareAddr.String()
-						break
-					}
-				}
-			}
-
-			Expect(cfanalytics.GetUUID()).ToNot(Equal(addr))
 		})
 	})
 
