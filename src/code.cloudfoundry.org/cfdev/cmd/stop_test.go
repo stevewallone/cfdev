@@ -1,23 +1,17 @@
 package cmd_test
 
-// import (
-// 	"encoding/binary"
-// 	"net"
-//
-// 	. "code.cloudfoundry.org/cfdev/cmd"
-//
-// 	"io/ioutil"
-// 	"os"
-// 	"os/exec"
-// 	"path/filepath"
-// 	"strconv"
-//
-// 	"code.cloudfoundry.org/cfdev/config"
-// 	. "github.com/onsi/ginkgo"
-// 	. "github.com/onsi/gomega"
-// 	"github.com/onsi/gomega/gexec"
-// 	"gopkg.in/segmentio/analytics-go.v3"
-// )
+import (
+	// . "code.cloudfoundry.org/cfdev/cmd"
+
+	. "github.com/onsi/ginkgo"
+	// . "github.com/onsi/gomega"
+)
+
+var _ = Describe("Stop", func() {
+	PIt("uncomment tests in file and fix", func() {
+	})
+})
+
 //
 // type MockClient struct {
 // 	WasCalledWith analytics.Message
