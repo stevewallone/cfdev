@@ -15,7 +15,7 @@ import (
 	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
-func NewStop(Config config.Config, AnalyticsClient analytics.Client) *cobra.Command {
+func NewStop(Config *config.Config, AnalyticsClient analytics.Client) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "stop",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -26,7 +26,7 @@ func NewStop(Config config.Config, AnalyticsClient analytics.Client) *cobra.Comm
 	return cmd
 }
 
-func runStop(Config config.Config, AnalyticsClient analytics.Client) error {
+func runStop(Config *config.Config, AnalyticsClient analytics.Client) error {
 	if AnalyticsClient != nil {
 		cfanalytics.TrackEvent(cfanalytics.STOP, map[string]interface{}{"type": "cf"}, AnalyticsClient)
 	}

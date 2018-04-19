@@ -22,7 +22,7 @@ func NewRoot(Exit chan struct{}, UI UI, Config config.Config, AnalyticsClient an
 	dev.AddCommand(NewCatalog(UI, Config))
 	dev.AddCommand(NewDownload(Exit, UI, Config))
 	dev.AddCommand(NewStart(Exit, UI, Config, AnalyticsClient))
-	dev.AddCommand(NewStop(Config, AnalyticsClient))
+	dev.AddCommand(NewStop(&Config, AnalyticsClient))
 	dev.AddCommand(NewTelemetry(UI, Config))
 
 	return root
