@@ -15,6 +15,19 @@ import (
 	"gopkg.in/segmentio/analytics-go.v3"
 )
 
+type Command interface {
+	Run(args []string) error
+}
+
+type Plugin struct {
+	Exit            chan struct{}
+	UI              terminal.UI
+	Config          config.Config
+	AnalyticsClient analytics.Client
+	Root            *cobra.Command
+	Version         plugin.VersionType
+}
+
 func main() {
 	exitChan := make(chan struct{})
 	sigChan := make(chan os.Signal, 1)
@@ -47,45 +60,17 @@ func main() {
 		Config:          conf,
 		AnalyticsClient: analyticsClient,
 		Root:            cmd.NewRoot(exitChan, ui, conf, analyticsClient),
+		Version:         plugin.VersionType{Major: 0, Minor: 0, Build: 2},
 	}
 	defer cfdev.AnalyticsClient.Close()
 
 	plugin.Start(cfdev)
 }
 
-type Command interface {
-	Run(args []string) error
-}
-
-type Plugin struct {
-	Exit            chan struct{}
-	UI              terminal.UI
-	Config          config.Config
-	AnalyticsClient analytics.Client
-	Root            *cobra.Command
-}
-
-func (p *Plugin) Run(connection plugin.CliConnection, args []string) {
-	if args[0] == "CLI-MESSAGE-UNINSTALL" {
-		cfanalytics.TrackEvent(cfanalytics.UNINSTALL, nil, p.AnalyticsClient)
-		stop := cmd.NewStop(p.Config, p.AnalyticsClient)
-		if err := stop.RunE(nil, []string{}); err != nil {
-			p.UI.Say("Error stopping cfdev: %s", err)
-			cfanalytics.TrackEvent(cfanalytics.ERROR, map[string]interface{}{"error": err}, p.AnalyticsClient)
-		}
-		return
-	}
-	p.execute(args)
-}
-
 func (p *Plugin) GetMetadata() plugin.PluginMetadata {
 	return plugin.PluginMetadata{
-		Name: "cfdev",
-		Version: plugin.VersionType{
-			Major: 0,
-			Minor: 0,
-			Build: 2,
-		},
+		Name:    "cfdev",
+		Version: p.Version,
 		Commands: []plugin.Command{
 			{
 				Name:     "dev",
@@ -98,7 +83,17 @@ func (p *Plugin) GetMetadata() plugin.PluginMetadata {
 	}
 }
 
-func (p *Plugin) execute(args []string) {
+func (p *Plugin) Run(connection plugin.CliConnection, args []string) {
+	if args[0] == "CLI-MESSAGE-UNINSTALL" {
+		cfanalytics.TrackEvent(cfanalytics.UNINSTALL, nil, p.AnalyticsClient)
+		stop := cmd.NewStop(p.Config, p.AnalyticsClient)
+		if err := stop.RunE(nil, []string{}); err != nil {
+			p.UI.Say("Error stopping cfdev: %s", err)
+			cfanalytics.TrackEvent(cfanalytics.ERROR, map[string]interface{}{"error": err}, p.AnalyticsClient)
+		}
+		return
+	}
+
 	cfanalytics.PromptOptIn(p.Config, p.UI)
 
 	p.Root.SetArgs(args)
