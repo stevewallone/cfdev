@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"strings"
-
 	"code.cloudfoundry.org/cfdev/config"
 	"github.com/spf13/cobra"
 	analytics "gopkg.in/segmentio/analytics-go.v3"
@@ -10,9 +8,9 @@ import (
 
 func NewRoot(Exit chan struct{}, UI UI, Config config.Config, AnalyticsClient analytics.Client) *cobra.Command {
 	root := &cobra.Command{Use: "cf"}
-	HideHelpFlag(root)
-	usageTemplate := strings.Replace(root.UsageTemplate(), "\n"+`Use "{{.CommandPath}} [command] --help" for more information about a command.`, "", -1)
-	root.SetUsageTemplate(usageTemplate)
+	// HideHelpFlag(root)
+	// usageTemplate := strings.Replace(root.UsageTemplate(), "\n"+`Use "{{.CommandPath}} [command] --help" for more information about a command.`, "", -1)
+	// root.SetUsageTemplate(usageTemplate)
 
 	dev := &cobra.Command{
 		Use:   "dev",
@@ -25,7 +23,7 @@ func NewRoot(Exit chan struct{}, UI UI, Config config.Config, AnalyticsClient an
 	dev.AddCommand(NewDownload(Exit, UI, Config))
 	dev.AddCommand(NewStart(Exit, UI, Config, AnalyticsClient))
 	dev.AddCommand(NewStop(Config, AnalyticsClient))
-	dev.AddCommand(NewTelemetry(Exit, UI, Config))
+	dev.AddCommand(NewTelemetry(UI, Config))
 
 	return root
 }

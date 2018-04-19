@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewTelemetry(Exit chan struct{}, UI UI, Config config.Config) *cobra.Command {
+func NewTelemetry(UI UI, Config config.Config) *cobra.Command {
 	var flagOff, flagOn bool
 	cmd := &cobra.Command{
 		Use:   "telemetry",
