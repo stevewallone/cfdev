@@ -34,6 +34,9 @@ var (
 	cfdevdUrl string
 	cfdevdMd5 string
 
+	gdnUrl string
+	gdnMd5 string
+
 	analyticsKey string
 )
 
@@ -135,6 +138,11 @@ func catalog() (resource.Catalog, error) {
 				URL:  cfdevdUrl,
 				Name: "cfdevd",
 				MD5:  cfdevdMd5,
+			},
+			{
+				URL:  gdnUrl,
+				Name: "gdn",
+				MD5:  gdnMd5,
 			},
 		},
 	}, nil

@@ -1,0 +1,24 @@
+---
+- type: replace
+  path: /releases/name=garden-runc
+  value:
+    name: garden-runc
+    version: "1.12.1"
+    url: http://bosh.io/d/github.com/cloudfoundry/garden-runc-release?v=1.12.1
+    sha1: ed353e41eec34c3713d6d80c4cc890afc7291cca
+- type: replace
+  path: /instance_groups/name=bosh/jobs/name=garden/properties/garden
+  value:
+    allow_host_access: true
+    apparmor_profile: ""
+    debug_listen_address: 127.0.0.1:17013
+    default_container_grace_time: 0
+    destroy_containers_on_start: true
+    graph_cleanup_threshold_in_mb: 0
+    listen_address: 127.0.0.1:7777
+    listen_network: tcp
+
+- type: remove
+  path: /releases/name=grootfs
+- type: remove
+  path: /instance_groups/name=bosh/jobs/name=grootfs

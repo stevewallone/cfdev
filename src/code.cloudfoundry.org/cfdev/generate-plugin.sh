@@ -20,6 +20,8 @@ go build \
   -ldflags \
     "-X $pkg.cfdepsUrl=file://$cfdev/output/cf-oss-deps.iso
      -X $pkg.cfdepsMd5=$(md5 $cfdev/output/cf-oss-deps.iso | awk '{ print $4 }')
+     -X $pkg.cfdepsSize=$(ls $cfdev/output/cf-oss-deps.iso | awk '{ print $4 }')
+
      -X $pkg.cfdevefiUrl=file://$cfdev/output/cfdev-efi.iso
      -X $pkg.cfdevefiMd5=$(md5 $cfdev/output/cfdev-efi.iso | awk '{ print $4 }')
      -X $pkg.vpnkitUrl=file://$cache_dir/vpnkit
