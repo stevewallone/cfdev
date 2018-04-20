@@ -1,5 +1,7 @@
 package cmd
 
+// +build darwin
+
 import (
 	"fmt"
 	"io"
@@ -18,9 +20,6 @@ import (
 	gdn "code.cloudfoundry.org/cfdev/garden"
 	"code.cloudfoundry.org/cfdev/network"
 	"code.cloudfoundry.org/cfdev/process"
-	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden/client"
-	"code.cloudfoundry.org/garden/client/connection"
 	"github.com/spf13/cobra"
 )
 
@@ -145,11 +144,14 @@ func (s *start) RunE() error {
 		return fmt.Errorf("Failed to write VM pid file: %v\n", err)
 	}
 
-	garden := client.New(connection.New("tcp", "localhost:8888"))
-	waitForGarden(garden)
+	garden, err := gdn.NewClient(s.Config)
+	if err != nil {
+		return err
+	}
+	gdn.WaitForGarden(garden, 3*time.Minute)
 
 	s.UI.Say("Deploying the BOSH Director...")
-	if err := gdn.DeployBosh(garden); err != nil {
+	if err := gdn.DeployBosh(s.Config, garden); err != nil {
 		return fmt.Errorf("Failed to deploy the BOSH Director: %v\n", err)
 	}
 
@@ -157,36 +159,11 @@ func (s *start) RunE() error {
 	if err := gdn.DeployCloudFoundry(garden, registries); err != nil {
 		return fmt.Errorf("Failed to deploy the Cloud Foundry: %v\n", err)
 	}
-
-	s.UI.Say(`
-  ██████╗███████╗██████╗ ███████╗██╗   ██╗
- ██╔════╝██╔════╝██╔══██╗██╔════╝██║   ██║
- ██║     █████╗  ██║  ██║█████╗  ██║   ██║
- ██║     ██╔══╝  ██║  ██║██╔══╝  ╚██╗ ██╔╝
- ╚██████╗██║     ██████╔╝███████╗ ╚████╔╝
-  ╚═════╝╚═╝     ╚═════╝ ╚══════╝  ╚═══╝
-             is now running!
-
-To begin using CF Dev, please run:
-    cf login -a https://api.v3.pcfdev.io --skip-ssl-validation
-
-Admin user => Email: admin / Password: admin
-Regular user => Email: user / Password: pass
-`)
+	s.UI.Say(cfdevStartedMessage)
 
 	s.Config.Analytics.Event(cfanalytics.START_END, map[string]interface{}{"type": "cf"})
 
 	return nil
-}
-
-func waitForGarden(client garden.Client) {
-	for {
-		if err := client.Ping(); err == nil {
-			return
-		}
-
-		time.Sleep(time.Second)
-	}
 }
 
 func isLinuxKitRunning(pidFile string) bool {

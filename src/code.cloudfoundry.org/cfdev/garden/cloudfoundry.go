@@ -1,7 +1,12 @@
 package garden
 
 import (
+	"archive/tar"
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
 	"gopkg.in/yaml.v2"
@@ -21,9 +26,15 @@ func DeployCloudFoundry(client garden.Client, dockerRegistries []string) error {
 				DstPath: "/var/vcap",
 				Mode:    garden.BindMountModeRW,
 			},
+			// TODO macos vs linux and make linux generic to CfdevHome
+			// {
+			// 	SrcPath: "/var/vcap/cache",
+			// 	DstPath: "/var/vcap/cache",
+			// 	Mode:    garden.BindMountModeRO,
+			// },
 			{
-				SrcPath: "/var/vcap/cache",
-				DstPath: "/var/vcap/cache",
+				SrcPath: "/home/dgodd/.cfdev/cache",
+				DstPath: "/var/vcap/cfdev_cache",
 				Mode:    garden.BindMountModeRO,
 			},
 		},
@@ -44,26 +55,60 @@ func DeployCloudFoundry(client garden.Client, dockerRegistries []string) error {
 		return err
 	}
 
-	process, err := container.Run(garden.ProcessSpec{
-		ID:   "deploy-cf",
-		Path: "/usr/bin/deploy-cf",
-		User: "root",
-	}, garden.ProcessIO{})
-
-	if err != nil {
+	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf-oss/allow-mounting", "/usr/bin/allow-mounting"); err != nil {
+		return err
+	}
+	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf-oss/deploy-cf", "/usr/bin/deploy-cf"); err != nil {
 		return err
 	}
 
-	exitCode, err := process.Wait()
-	if err != nil {
+	if err := runInContainer(container, "allow-mounting", "/usr/bin/allow-mounting"); err != nil {
 		return err
 	}
-
-	if exitCode != 0 {
-		return fmt.Errorf("process exited with status %v", exitCode)
+	if err := runInContainer(container, "deploy-cf", "/usr/bin/deploy-cf"); err != nil {
+		return err
 	}
 
 	client.Destroy("deploy-cf")
 
 	return nil
+}
+
+func runInContainer(container garden.Container, id, path string, args ...string) error {
+	fmt.Printf("DG: About to run %s: %s %v\n", id, path, args)
+	process, err := container.Run(garden.ProcessSpec{
+		ID:   id,
+		Path: path,
+		Args: args,
+		User: "root",
+	}, garden.ProcessIO{
+		// TODO write to file instead
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	})
+	if err != nil {
+		return err
+	}
+	exitCode, err := process.Wait()
+	if err != nil {
+		return err
+	}
+	if exitCode != 0 {
+		return fmt.Errorf("process exited with status %v", exitCode)
+	}
+	return nil
+}
+
+func copyFileToContainer(container garden.Container, src, dest string) error {
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	txt, _ := ioutil.ReadFile(src)
+	tw.WriteHeader(&tar.Header{Name: filepath.Base(dest), Mode: 0755, Size: int64(len(txt))})
+	tw.Write(txt)
+	tw.Close()
+	return container.StreamIn(garden.StreamInSpec{
+		Path:      filepath.Dir(dest),
+		User:      "root",
+		TarStream: &buf,
+	})
 }

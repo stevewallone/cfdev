@@ -1,55 +1,18 @@
 #!/bin/bash
+set -euo pipefail
 
-set -e
-
-create_loop_devices() {
-  echo "creating loop devices..."
-  for i in {0..255}
-  do
-    mknod -m 0660 /dev/loop${i} b 7 $i || true
-  done
-}
-
-permit_device_control() {
-  local devices_mount_info=$(cat /proc/self/cgroup | grep devices)
-
-  if [ -z "$devices_mount_info" ]; then
-    # cgroups not set up; must not be in a container
-    return
-  fi
-
-  local devices_subsytems=$(echo $devices_mount_info | cut -d: -f2)
-  local devices_subdir=$(echo $devices_mount_info | cut -d: -f3)
-
-  if [ "$devices_subdir" = "/" ]; then
-    # we're in the root devices cgroup; must not be in a container
-    return
-  fi
-
-  if [ ! -e /tmp/devices-cgroup ]; then
-    # mount our container's devices subsystem somewhere
-    mkdir /tmp/devices-cgroup
-    mount -t cgroup -o $devices_subsytems none /tmp/devices-cgroup
-  fi
-
-  # permit our cgroup to do everything with all devices
-  echo -n a > /tmp/devices-cgroup${devices_subdir}/devices.allow || true
-
-  umount /tmp/devices-cgroup || true
-}
-
+export BOSH_DIRECTOR_IP="10.245.0.2"
 export DIRECTOR_DIR=/var/vcap/director
 mkdir -p "${DIRECTOR_DIR}"
 
 exec 1> >(tee -i "${DIRECTOR_DIR}/deploy.log")
 exec 2>&1
 
-permit_device_control
-create_loop_devices
-
-export BOSH_DIRECTOR_IP="10.245.0.2"
-
-cp /var/vcap/cache/director.yml "${DIRECTOR_DIR}"
+if [ -S /var/vcap/gdn.socket ]; then
+  bosh int /var/vcap/cache/director.yml -o /var/vcap/use_gdn_unix_socket.yml -o /var/vcap/use_gdn_1_12_1.yml > "${DIRECTOR_DIR}/director.yml"
+else
+  cp /var/vcap/cache/director.yml "${DIRECTOR_DIR}"
+fi
 
 bosh --tty create-env \
   "${DIRECTOR_DIR}/director.yml" \

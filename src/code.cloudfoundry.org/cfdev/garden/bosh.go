@@ -1,12 +1,13 @@
 package garden
 
 import (
-	"fmt"
+	"path/filepath"
 
+	"code.cloudfoundry.org/cfdev/config"
 	"code.cloudfoundry.org/garden"
 )
 
-func DeployBosh(client garden.Client) error {
+func DeployBosh(Config config.Config, client garden.Client, dockerRegistries []string) error {
 	containerSpec := garden.ContainerSpec{
 		Handle:     "deploy-bosh",
 		Privileged: true,
@@ -20,9 +21,20 @@ func DeployBosh(client garden.Client) error {
 				DstPath: "/var/vcap",
 				Mode:    garden.BindMountModeRW,
 			},
+			// TODO macos vs linux and make linux generic to CfdevHome
+			// {
+			// 	SrcPath: "/var/vcap/cache",
+			// 	DstPath: "/var/vcap/cache",
+			// 	Mode:    garden.BindMountModeRO,
+			// },
 			{
-				SrcPath: "/var/vcap/cache",
-				DstPath: "/var/vcap/cache",
+				SrcPath: "/home/dgodd/.cfdev/cache",
+				DstPath: "/var/vcap/cfdev_cache",
+				Mode:    garden.BindMountModeRO,
+			},
+			{
+				SrcPath: filepath.Join(Config.CFDevHome, "gdn.socket"),
+				DstPath: "/var/vcap/gdn.socket",
 				Mode:    garden.BindMountModeRO,
 			},
 		},
@@ -33,23 +45,25 @@ func DeployBosh(client garden.Client) error {
 		return err
 	}
 
-	process, err := container.Run(garden.ProcessSpec{
-		ID:   "deploy-bosh",
-		Path: "/usr/bin/deploy-bosh",
-		User: "root",
-	}, garden.ProcessIO{})
-
-	if err != nil {
+	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf-oss/allow-mounting", "/usr/bin/allow-mounting"); err != nil {
+		return err
+	}
+	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf-oss/deploy-bosh", "/usr/bin/deploy-bosh"); err != nil {
+		return err
+	}
+	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf-oss/bosh-operations/use_gdn_unix_socket.yml", "/var/vcap/use_gdn_unix_socket.yml"); err != nil {
+		return err
+	}
+	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf-oss/bosh-operations/use_gdn_1_12_1.yml", "/var/vcap/use_gdn_1_12_1.yml"); err != nil {
 		return err
 	}
 
-	exitCode, err := process.Wait()
-	if err != nil {
+	if err := runInContainer(container, "allow-mounting", "/usr/bin/allow-mounting"); err != nil {
 		return err
 	}
-
-	if exitCode != 0 {
-		return fmt.Errorf("process exited with status %v", exitCode)
+	// TODO copy back to workspace.tar // "/usr/bin/deploy-bosh",
+	if err := runInContainer(container, "deploy-bosh", "/usr/bin/deploy-bosh"); err != nil {
+		return err
 	}
 
 	client.Destroy("deploy-bosh")

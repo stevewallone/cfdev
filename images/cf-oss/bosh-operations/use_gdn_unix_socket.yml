@@ -1,0 +1,6 @@
+---
+- type: replace
+  path: /cloud_provider/properties/warden_cpi/warden
+  value:
+    connect_address: "/var/vcap/gdn.socket"
+    connect_network: "unix"
