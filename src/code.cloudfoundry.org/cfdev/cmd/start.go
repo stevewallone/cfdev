@@ -1,6 +1,6 @@
-package cmd
-
 // +build darwin
+
+package cmd
 
 import (
 	"fmt"
@@ -29,13 +29,13 @@ type UI interface {
 }
 
 type start struct {
-	Exit       chan struct{}
-	UI         UI
-	Config     config.Config
-	Registries string
-	DepsIsoPath    string
-	Cpus       int
-	Mem        int
+	Exit        chan struct{}
+	UI          UI
+	Config      config.Config
+	Registries  string
+	DepsIsoPath string
+	Cpus        int
+	Mem         int
 }
 
 func NewStart(Exit chan struct{}, UI UI, Config config.Config) *cobra.Command {
@@ -51,7 +51,7 @@ func NewStart(Exit chan struct{}, UI UI, Config config.Config) *cobra.Command {
 	pf.StringVarP(&s.Registries, "registries", "r", "", "docker registries that skip ssl validation - ie. host:port,host2:port2")
 	pf.IntVarP(&s.Cpus, "cpus", "c", 4, "cpus to allocate to vm")
 	pf.IntVarP(&s.Mem, "memory", "m", 4096, "memory to allocate to vm in MB")
-	
+
 	return cmd
 }
 
@@ -87,11 +87,11 @@ func (s *start) RunE() error {
 	vCmd := vpnKit.Command()
 
 	linuxkit := process.LinuxKit{
-		Config: s.Config,
+		Config:      s.Config,
 		DepsIsoPath: s.DepsIsoPath,
 	}
 
-	UpdateCatalog(map[string]string {"file": s.DepsIsoPath,}, s.Config.Dependencies.Items)
+	UpdateCatalog(map[string]string{"file": s.DepsIsoPath}, s.Config.Dependencies.Items)
 	if err = download(s.Config.Dependencies, s.Config.CacheDir, s.UI.Writer()); err != nil {
 		return err
 	}

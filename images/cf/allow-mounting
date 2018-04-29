@@ -40,7 +40,7 @@ permit_device_control() {
 permit_device_control
 create_loop_devices
 
-if [ -f /var/vcap/cfdev_cache/cf-oss-deps.iso ]; then
+if [ -f /var/vcap/cfdev_cache/cf-deps.iso ]; then
   mkdir -p /var/vcap/cache
-  mount -o loop,ro /var/vcap/cfdev_cache/cf-oss-deps.iso /var/vcap/cache
+  mount -o loop,ro /var/vcap/cfdev_cache/cf-deps.iso /var/vcap/cache
 fi

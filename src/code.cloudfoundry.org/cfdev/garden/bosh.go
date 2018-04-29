@@ -45,16 +45,16 @@ func DeployBosh(Config config.Config, client garden.Client, dockerRegistries []s
 		return err
 	}
 
-	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf-oss/allow-mounting", "/usr/bin/allow-mounting"); err != nil {
+	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf/allow-mounting", "/usr/bin/allow-mounting"); err != nil {
 		return err
 	}
-	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf-oss/deploy-bosh", "/usr/bin/deploy-bosh"); err != nil {
+	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf/deploy-bosh", "/usr/bin/deploy-bosh"); err != nil {
 		return err
 	}
-	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf-oss/bosh-operations/use_gdn_unix_socket.yml", "/var/vcap/use_gdn_unix_socket.yml"); err != nil {
+	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf/bosh-operations/use_gdn_unix_socket.yml", "/var/vcap/use_gdn_unix_socket.yml"); err != nil {
 		return err
 	}
-	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf-oss/bosh-operations/use_gdn_1_12_1.yml", "/var/vcap/use_gdn_1_12_1.yml"); err != nil {
+	if err := copyFileToContainer(container, "/home/dgodd/workspace/cfdev/images/cf/bosh-operations/use_gdn_1_12_1.yml", "/var/vcap/use_gdn_1_12_1.yml"); err != nil {
 		return err
 	}
 

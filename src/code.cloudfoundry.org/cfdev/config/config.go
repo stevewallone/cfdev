@@ -151,7 +151,7 @@ func catalog() (resource.Catalog, error) {
 				MD5:   cfdepsMd5,
 				Size:  aToUint64(cfdepsSize),
 				Type:  "deps-iso",
-				InUse: true,
+				InUse: cfdepsUrl != "",
 			},
 			{
 				URL:   cfdevefiUrl,
@@ -159,7 +159,7 @@ func catalog() (resource.Catalog, error) {
 				MD5:   cfdevefiMd5,
 				Size:  aToUint64(cfdevefiSize),
 				Type:  "efi-iso",
-				InUse: true,
+				InUse: cfdevefiUrl != "",
 			},
 			{
 				URL:   vpnkitUrl,
@@ -167,7 +167,7 @@ func catalog() (resource.Catalog, error) {
 				MD5:   vpnkitMd5,
 				Size:  aToUint64(vpnkitSize),
 				Type:  "vpnkit",
-				InUse: true,
+				InUse: vpnkitUrl != "",
 			},
 			{
 				URL:   hyperkitUrl,
@@ -175,7 +175,7 @@ func catalog() (resource.Catalog, error) {
 				MD5:   hyperkitMd5,
 				Size:  aToUint64(hyperkitSize),
 				Type:  "hypervisor",
-				InUse: true,
+				InUse: hyperkitUrl != "",
 			},
 			{
 				URL:   linuxkitUrl,
@@ -183,7 +183,7 @@ func catalog() (resource.Catalog, error) {
 				MD5:   linuxkitMd5,
 				Size:  aToUint64(linuxkitSize),
 				Type:  "linuxkit",
-				InUse: true,
+				InUse: linuxkitUrl != "",
 			},
 			{
 				URL:   qcowtoolUrl,
@@ -191,7 +191,7 @@ func catalog() (resource.Catalog, error) {
 				MD5:   qcowtoolMd5,
 				Size:  aToUint64(qcowtoolSize),
 				Type:  "qcow",
-				InUse: true,
+				InUse: qcowtoolUrl != "",
 			},
 			{
 				URL:   uefiUrl,
@@ -199,7 +199,7 @@ func catalog() (resource.Catalog, error) {
 				MD5:   uefiMd5,
 				Size:  aToUint64(uefiSize),
 				Type:  "efi-fd",
-				InUse: true,
+				InUse: uefiUrl != "",
 			},
 			{
 				URL:   cfdevdUrl,
@@ -207,12 +207,14 @@ func catalog() (resource.Catalog, error) {
 				MD5:   cfdevdMd5,
 				Size:  aToUint64(cfdevdSize),
 				Type:  "daemon",
-				InUse: true,
+				InUse: cfdevdUrl != "",
 			},
 			{
-				URL:  gdnUrl,
-				Name: "gdn",
-				MD5:  gdnMd5,
+				URL:   gdnUrl,
+				Name:  "gdn",
+				MD5:   gdnMd5,
+				Type:  "gdn",
+				InUse: gdnUrl != "",
 			},
 		},
 	}

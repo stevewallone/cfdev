@@ -1,6 +1,6 @@
-package network
+// +build darwin !linux
 
-// +build darwin
+package network
 
 import (
 	"fmt"

@@ -6,18 +6,20 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"code.cloudfoundry.org/cfdev/cfanalytics"
 	"code.cloudfoundry.org/cfdev/config"
 	gdn "code.cloudfoundry.org/cfdev/garden"
 	"code.cloudfoundry.org/cfdev/process"
 	"github.com/spf13/cobra"
-	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
-func NewStop(Config *config.Config, AnalyticsClient analytics.Client) *cobra.Command {
+func NewStop(Config config.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		Use: "stop",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			garden := gdn.NewClient(*Config)
+			Config.Analytics.Event(cfanalytics.STOP, map[string]interface{}{"type": "cf"})
+
+			garden := gdn.NewClient(Config)
 			containers, err := garden.Containers(nil)
 			if err != nil {
 				return nil

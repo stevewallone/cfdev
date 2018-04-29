@@ -5,10 +5,9 @@ import (
 
 	"code.cloudfoundry.org/cfdev/config"
 	"github.com/spf13/cobra"
-	"gopkg.in/segmentio/analytics-go.v3"
 )
 
-func NewRoot(Exit chan struct{}, UI UI, Config config.Config, AnalyticsClient analytics.Client) *cobra.Command {
+func NewRoot(Exit chan struct{}, UI UI, Config config.Config) *cobra.Command {
 	root := &cobra.Command{Use: "cf", SilenceUsage: true, SilenceErrors: true}
 	root.PersistentFlags().Bool("help", false, "")
 	root.PersistentFlags().Lookup("help").Hidden = true

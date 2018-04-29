@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -15,24 +16,23 @@ import (
 	gdn "code.cloudfoundry.org/cfdev/garden"
 	"code.cloudfoundry.org/garden/client"
 	"github.com/spf13/cobra"
-	analytics "gopkg.in/segmentio/analytics-go.v3"
 )
 
 type UI interface {
 	Say(message string, args ...interface{})
+	Writer() io.Writer
 }
 
 type start struct {
-	Exit            chan struct{}
-	UI              UI
-	Config          config.Config
-	AnalyticsClient analytics.Client
-	Registries      string
-	gdnServer       *exec.Cmd
+	Exit       chan struct{}
+	UI         UI
+	Config     config.Config
+	Registries string
+	gdnServer  *exec.Cmd
 }
 
-func NewStart(Exit chan struct{}, UI UI, Config config.Config, AnalyticsClient analytics.Client) *cobra.Command {
-	s := start{Exit: Exit, UI: UI, Config: Config, AnalyticsClient: AnalyticsClient}
+func NewStart(Exit chan struct{}, UI UI, Config config.Config) *cobra.Command {
+	s := start{Exit: Exit, UI: UI, Config: Config}
 	cmd := &cobra.Command{
 		Use: "start",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -57,7 +57,7 @@ func (s *start) RunE() error {
 		os.Exit(128)
 	}()
 
-	cfanalytics.TrackEvent(cfanalytics.START_BEGIN, map[string]interface{}{"type": "cf"}, s.AnalyticsClient)
+	s.Config.Analytics.Event(cfanalytics.START_BEGIN, map[string]interface{}{"type": "cf"})
 
 	if err := env.Setup(s.Config); err != nil {
 		return err
@@ -76,12 +76,12 @@ func (s *start) RunE() error {
 	garden := gdn.NewClient(s.Config)
 	if garden.Ping() == nil {
 		s.UI.Say("CF Dev is already running...")
-		cfanalytics.TrackEvent(cfanalytics.START_END, map[string]interface{}{"type": "cf", "alreadyrunning": true}, s.AnalyticsClient)
+		s.Config.Analytics.Event(cfanalytics.START_END, map[string]interface{}{"type": "cf", "alreadyrunning": true})
 		return nil
 	}
 
 	s.UI.Say("Downloading Resources...")
-	if err := download(s.Config.Dependencies, s.Config.CacheDir); err != nil {
+	if err = download(s.Config.Dependencies, s.Config.CacheDir, s.UI.Writer()); err != nil {
 		return err
 	}
 
@@ -106,7 +106,7 @@ func (s *start) RunE() error {
 
 	s.UI.Say(cfdevStartedMessage)
 
-	cfanalytics.TrackEvent(cfanalytics.START_END, map[string]interface{}{"type": "cf"}, s.AnalyticsClient)
+	s.Config.Analytics.Event(cfanalytics.START_END, map[string]interface{}{"type": "cf"})
 
 	return nil
 }

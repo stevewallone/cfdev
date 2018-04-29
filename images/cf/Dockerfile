@@ -56,6 +56,7 @@ RUN set -x && \
 
 ## Local scripts & dependencies
 ADD app-security-group.json /etc/cf/app-security-group.json
+ADD allow-mounting /usr/bin/allow-mounting
 ADD deploy-bosh /usr/bin/deploy-bosh
 ADD deploy-cf /usr/bin/deploy-cf
 

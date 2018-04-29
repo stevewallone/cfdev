@@ -1,6 +1,6 @@
-package cmd
-
 // +build darwin
+
+package cmd
 
 import (
 	"encoding/binary"
