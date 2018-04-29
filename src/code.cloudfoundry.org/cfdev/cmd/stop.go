@@ -1,5 +1,7 @@
 package cmd
 
+// +build darwin
+
 import (
 	"encoding/binary"
 	"fmt"

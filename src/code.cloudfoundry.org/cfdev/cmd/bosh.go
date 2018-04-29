@@ -1,5 +1,7 @@
 package cmd
 
+// +build darwin
+
 import (
 	"fmt"
 	"os"

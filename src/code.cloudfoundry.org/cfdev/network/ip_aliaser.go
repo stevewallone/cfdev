@@ -1,5 +1,7 @@
 package network
 
+// +build darwin
+
 import (
 	"fmt"
 	"net"
