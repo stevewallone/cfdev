@@ -1,6 +1,10 @@
 package garden
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
+	"os/user"
 	"path/filepath"
 
 	"code.cloudfoundry.org/cfdev/config"
@@ -8,28 +12,35 @@ import (
 )
 
 func DeployBosh(Config config.Config, client garden.Client, dockerRegistries []string) error {
+	if err := mntCfDeps(Config); err != nil {
+		return fmt.Errorf("mounting cf-deps.iso: %s", err)
+	}
+	defer exec.Command("sudo", "umount", filepath.Join(Config.CFDevHome, "cache", "cf-deps")).Run()
+
+	// _ = os.MkdirAll(filepath.Join(Config.CFDevHome, "vcap", "director"), 0755)
+	// _ = os.MkdirAll(filepath.Join(Config.CFDevHome, "vcap", "store"), 0755)
+
 	containerSpec := garden.ContainerSpec{
 		Handle:     "deploy-bosh",
 		Privileged: true,
 		Network:    "10.246.0.0/16",
 		Image: garden.ImageRef{
-			URI: "/var/vcap/cache/workspace.tar",
+			URI: filepath.Join(Config.CFDevHome, "cache", "cf-deps", "workspace.tar"),
 		},
 		BindMounts: []garden.BindMount{
 			{
-				SrcPath: "/var/vcap",
-				DstPath: "/var/vcap",
+				SrcPath: "/var/vcap/director", // filepath.Join(Config.CFDevHome, "vcap", "director"),
+				DstPath: "/var/vcap/director",
 				Mode:    garden.BindMountModeRW,
 			},
-			// TODO macos vs linux and make linux generic to CfdevHome
-			// {
-			// 	SrcPath: "/var/vcap/cache",
-			// 	DstPath: "/var/vcap/cache",
-			// 	Mode:    garden.BindMountModeRO,
-			// },
 			{
-				SrcPath: "/home/dgodd/.cfdev/cache",
-				DstPath: "/var/vcap/cfdev_cache",
+				SrcPath: "/var/vcap/store", // filepath.Join(Config.CFDevHome, "vcap", "store"),
+				DstPath: "/var/vcap/store",
+				Mode:    garden.BindMountModeRW,
+			},
+			{
+				SrcPath: filepath.Join(Config.CFDevHome, "cache", "cf-deps"),
+				DstPath: "/var/vcap/cache",
 				Mode:    garden.BindMountModeRO,
 			},
 			{
@@ -68,5 +79,19 @@ func DeployBosh(Config config.Config, client garden.Client, dockerRegistries []s
 
 	client.Destroy("deploy-bosh")
 
+	return nil
+}
+
+func mntCfDeps(Config config.Config) error {
+	if err := os.MkdirAll(filepath.Join(Config.CFDevHome, "cache", "cf-deps"), 0755); err != nil {
+		return err
+	}
+	currentUser, err := user.Current()
+	if err != nil {
+		return err
+	}
+	if err := exec.Command("sudo", "mount", "-o", "loop,ro,uid="+currentUser.Username, filepath.Join(Config.CFDevHome, "cache", "cf-deps.iso"), filepath.Join(Config.CFDevHome, "cache", "cf-deps")).Run(); err != nil {
+		return err
+	}
 	return nil
 }
