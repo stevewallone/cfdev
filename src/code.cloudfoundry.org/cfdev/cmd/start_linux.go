@@ -97,7 +97,7 @@ func (s *start) RunE() error {
 	}
 
 	// TODO we need to do `sudo route add -host 10.144.0.34 gw 10.245.0.2`
-	_ = exec.Command("sudo", "route", "add", "-host", "10.144.0.34", "gw 10.245.0.2").Run()
+	_ = exec.Command("sudo", "route", "add", "-host", "10.144.0.34", "gw", "10.245.0.2").Run()
 
 	s.UI.Say("Deploying CF...")
 	if err := gdn.DeployCloudFoundry(garden, registries); err != nil {
