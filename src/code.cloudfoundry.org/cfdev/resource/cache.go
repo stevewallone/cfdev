@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"code.cloudfoundry.org/cfdev/resource/retry"
 )
 
 type Progress interface {
@@ -62,7 +64,8 @@ func (c *Cache) download(item *Item) error {
 	}
 
 	tmpPath := filepath.Join(c.Dir, item.Name+".tmp."+item.MD5)
-	if err := c.downloadHTTP(item.URL, tmpPath); err != nil {
+	downloadFn := func() error { return c.downloadHTTP(item.URL, tmpPath) }
+	if err := retry.Retry(downloadFn, retry.Retryable(10)); err != nil {
 		return err
 	}
 	if m, err := MD5(tmpPath); err != nil {
@@ -97,7 +100,7 @@ func (c *Cache) downloadHTTP(url, tmpPath string) error {
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		if _, err = io.Copy(out, io.TeeReader(resp.Body, c.Progress)); err != nil {
-			return err
+			return retry.WrapAsRetryable(err)
 		}
 	} else if resp.StatusCode == 416 {
 		// Possibly full file already downloaded
