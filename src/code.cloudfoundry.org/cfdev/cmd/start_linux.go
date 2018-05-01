@@ -100,7 +100,7 @@ func (s *start) RunE() error {
 	_ = exec.Command("sudo", "route", "add", "-host", "10.144.0.34", "gw", "10.245.0.2").Run()
 
 	s.UI.Say("Deploying CF...")
-	if err := gdn.DeployCloudFoundry(garden, registries); err != nil {
+	if err := gdn.DeployCloudFoundry(s.Config, garden, registries); err != nil {
 		return fmt.Errorf("Failed to deploy the Cloud Foundry: %v\n", err)
 	}
 

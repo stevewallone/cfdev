@@ -8,33 +8,39 @@ import (
 	"os"
 	"path/filepath"
 
+	"code.cloudfoundry.org/cfdev/config"
 	"code.cloudfoundry.org/garden"
 	"gopkg.in/yaml.v2"
 )
 
-func DeployCloudFoundry(client garden.Client, dockerRegistries []string) error {
+func DeployCloudFoundry(Config config.Config, client garden.Client, dockerRegistries []string) error {
+	if unmount, err := mntCfDeps(Config); err != nil {
+		return fmt.Errorf("mounting cf-deps.iso: %s", err)
+	} else {
+		defer unmount()
+	}
+
 	containerSpec := garden.ContainerSpec{
 		Handle:     "deploy-cf",
 		Privileged: true,
 		Network:    "10.246.0.0/16",
 		Image: garden.ImageRef{
-			URI: "/var/vcap/cache/workspace.tar",
+			URI: filepath.Join(Config.CFDevHome, "cache", "cf-deps", "workspace.tar"),
 		},
 		BindMounts: []garden.BindMount{
 			{
-				SrcPath: "/var/vcap",
-				DstPath: "/var/vcap",
+				SrcPath: "/var/vcap/director", // filepath.Join(Config.CFDevHome, "vcap", "director"),
+				DstPath: "/var/vcap/director",
 				Mode:    garden.BindMountModeRW,
 			},
-			// TODO macos vs linux and make linux generic to CfdevHome
-			// {
-			// 	SrcPath: "/var/vcap/cache",
-			// 	DstPath: "/var/vcap/cache",
-			// 	Mode:    garden.BindMountModeRO,
-			// },
 			{
-				SrcPath: "/home/dgodd/.cfdev/cache",
-				DstPath: "/var/vcap/cfdev_cache",
+				SrcPath: "/var/vcap/store", // filepath.Join(Config.CFDevHome, "vcap", "store"),
+				DstPath: "/var/vcap/store",
+				Mode:    garden.BindMountModeRW,
+			},
+			{
+				SrcPath: filepath.Join(Config.CFDevHome, "cache", "cf-deps"),
+				DstPath: "/var/vcap/cache",
 				Mode:    garden.BindMountModeRO,
 			},
 		},
