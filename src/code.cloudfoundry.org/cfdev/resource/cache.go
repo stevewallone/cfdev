@@ -37,6 +37,9 @@ func (c *Cache) Sync(clog *Catalog) error {
 		if err := c.download(&item); err != nil {
 			return err
 		}
+		if err := os.Chmod(filepath.Join(c.Dir, item.Name), 0755); err != nil {
+			return err
+		}
 	}
 	c.Progress.End()
 	return c.removeUnknown(clog)
