@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"syscall"
-
-	"io"
+	"time"
 
 	"code.cloudfoundry.org/cfdevd/cmd"
 	"code.cloudfoundry.org/cfdevd/launchd"
@@ -43,6 +44,7 @@ func registerSignalHandler() {
 
 func install(programSrc string) {
 	lctl := launchd.New("")
+	removeOld(lctl, "org.cloudfoundry.cfdevd")
 	program := "/Library/PrivilegedHelperTools/org.cloudfoundry.cfdevd"
 	cfdevdSpec := models.DaemonSpec{
 		Label:   "org.cloudfoundry.cfdevd",
@@ -62,6 +64,17 @@ func install(programSrc string) {
 	}
 	if err := lctl.AddDaemon(cfdevdSpec); err != nil {
 		fmt.Println("Failed to install cfdevd: ", err)
+	}
+}
+
+func removeOld(lctl *launchd.Launchd, label string) {
+	for {
+		exec.Command("launchctl", "remove", label)
+		running, err := lctl.IsRunning(label)
+		if !running && err == nil {
+			return
+		}
+		time.Sleep(time.Second)
 	}
 }
 
