@@ -35,48 +35,45 @@ type Launchd interface {
 	IsRunning(label string) (bool, error)
 }
 
-type start struct {
+type Start struct {
 	Exit        chan struct{}
 	LocalExit   chan struct{}
 	UI          UI
 	Config      config.Config
 	Launchd     Launchd
 	ProcManager ProcManager
+}
+
+type StartArgs struct {
 	Registries  string
 	DepsIsoPath string
 	Cpus        int
 	Mem         int
 }
 
-func NewStart(Exit chan struct{}, UI UI, Config config.Config, Launchd Launchd, procManager ProcManager) *cobra.Command {
-	s := start{
-		Exit:        Exit,
-		UI:          UI,
-		Config:      Config,
-		Launchd:     Launchd,
-		ProcManager: procManager,
-		LocalExit:   make(chan struct{}, 10),
-	}
+func (s *Start) Cmd() *cobra.Command {
+	startArgs := StartArgs{}
+
 	cmd := &cobra.Command{
 		Use: "start",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := s.RunE()
+			err := s.Run(startArgs)
 			if err != nil {
 				return errors.SafeWrap(err, "cf dev start")
 			}
 			return nil
 		},
 	}
-	pf := cmd.PersistentFlags()
-	pf.StringVarP(&s.DepsIsoPath, "file", "f", "", "path to .dev file containing bosh & cf bits")
-	pf.StringVarP(&s.Registries, "registries", "r", "", "docker registries that skip ssl validation - ie. host:port,host2:port2")
-	pf.IntVarP(&s.Cpus, "cpus", "c", 4, "cpus to allocate to vm")
-	pf.IntVarP(&s.Mem, "memory", "m", 4096, "memory to allocate to vm in MB")
 
+	pf := cmd.PersistentFlags()
+	pf.StringVarP(&startArgs.DepsIsoPath, "file", "f", "", "path to .dev file containing bosh & cf bits")
+	pf.StringVarP(&startArgs.Registries, "registries", "r", "", "docker registries that skip ssl validation - ie. host:port,host2:port2")
+	pf.IntVarP(&startArgs.Cpus, "cpus", "c", 4, "cpus to allocate to vm")
+	pf.IntVarP(&startArgs.Mem, "memory", "m", 4096, "memory to allocate to vm in MB")
 	return cmd
 }
 
-func (s *start) RunE() error {
+func (s *Start) Run(args StartArgs) error {
 	go func() {
 		select {
 		case <-s.Exit:
@@ -112,12 +109,12 @@ func (s *start) RunE() error {
 		return errors.SafeWrap(err, "setting up network")
 	}
 
-	registries, err := s.parseDockerRegistriesFlag(s.Registries)
+	registries, err := s.parseDockerRegistriesFlag(args.Registries)
 	if err != nil {
 		return errors.SafeWrap(err, "Unable to parse docker registries")
 	}
 
-	if s.DepsIsoPath != "" {
+	if args.DepsIsoPath != "" {
 		item := s.Config.Dependencies.Lookup("cf-deps.iso")
 		item.InUse = false
 	}
@@ -150,9 +147,9 @@ func (s *start) RunE() error {
 	s.UI.Say("Starting the VM...")
 	linuxKit := process.LinuxKit{
 		Config:      s.Config,
-		DepsIsoPath: s.DepsIsoPath,
+		DepsIsoPath: args.DepsIsoPath,
 	}
-	daemonSpec, err := linuxKit.DaemonSpec(s.Cpus, s.Mem)
+	daemonSpec, err := linuxKit.DaemonSpec(args.Cpus, args.Mem)
 	if err != nil {
 		return err
 	}
@@ -222,7 +219,7 @@ func cleanupStateDir(cfg config.Config) error {
 	return nil
 }
 
-func (s *start) setupNetworking() error {
+func (s *Start) setupNetworking() error {
 	err := network.AddLoopbackAliases(s.Config.BoshDirectorIP, s.Config.CFRouterIP)
 
 	if err != nil {
@@ -232,7 +229,7 @@ func (s *start) setupNetworking() error {
 	return nil
 }
 
-func (s *start) parseDockerRegistriesFlag(flag string) ([]string, error) {
+func (s *Start) parseDockerRegistriesFlag(flag string) ([]string, error) {
 	if flag == "" {
 		return nil, nil
 	}
@@ -257,7 +254,7 @@ func (s *start) parseDockerRegistriesFlag(flag string) ([]string, error) {
 	return registries, nil
 }
 
-func (s *start) watchLaunchd(label string) {
+func (s *Start) watchLaunchd(label string) {
 	go func() {
 		for {
 			running, err := s.Launchd.IsRunning(label)

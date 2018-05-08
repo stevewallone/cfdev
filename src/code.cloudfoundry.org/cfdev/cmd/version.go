@@ -5,12 +5,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewVersion(UI UI, Config config.Config) *cobra.Command {
-	cmd := &cobra.Command{
+type Version struct {
+	UI     UI
+	Config config.Config
+}
+
+func (v *Version) Run() error {
+	v.UI.Say("Version: %s", v.Config.CliVersion.Original)
+	return nil
+}
+
+func (v *Version) Cmd() *cobra.Command {
+	return &cobra.Command{
 		Use: "version",
 		Run: func(cmd *cobra.Command, args []string) {
-			UI.Say("Version: %s", Config.CliVersion.Original)
+			v.Run()
 		},
 	}
-	return cmd
 }
