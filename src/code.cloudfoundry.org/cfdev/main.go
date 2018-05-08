@@ -61,7 +61,6 @@ func main() {
 
 	v := conf.CliVersion
 	cfdev := &Plugin{
-		Exit:    exitChan,
 		UI:      ui,
 		Config:  conf,
 		Root:    cmd.NewRoot(exitChan, ui, conf, lctl),
