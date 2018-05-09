@@ -1,4 +1,4 @@
-package cmd
+package telemetry
 
 import (
 	"code.cloudfoundry.org/cfdev/config"

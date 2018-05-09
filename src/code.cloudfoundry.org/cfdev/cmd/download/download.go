@@ -1,4 +1,4 @@
-package cmd
+package download
 
 import (
 	"fmt"
@@ -49,10 +49,10 @@ func (d *Download) RunE(cmd *cobra.Command, args []string) error {
 	}
 
 	d.UI.Say("Downloading Resources...")
-	return download(d.Config.Dependencies, d.Config.CacheDir, d.UI.Writer())
+	return CacheSync(d.Config.Dependencies, d.Config.CacheDir, d.UI.Writer())
 }
 
-func download(dependencies resource.Catalog, cacheDir string, writer io.Writer) error {
+func CacheSync(dependencies resource.Catalog, cacheDir string, writer io.Writer) error {
 	logCatalog(dependencies, cacheDir)
 	skipVerify := strings.ToLower(os.Getenv("CFDEV_SKIP_ASSET_CHECK"))
 

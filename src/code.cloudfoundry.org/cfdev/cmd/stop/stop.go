@@ -1,4 +1,4 @@
-package cmd
+package stop
 
 import (
 	"path/filepath"
@@ -53,7 +53,7 @@ func (s *Stop) RunE(cmd *cobra.Command, args []string) error {
 		reterr = errors.SafeWrap(err, "failed to stop vpnkit")
 	}
 
-	if err := s.ProcManager.SafeKill(filepath.Join(config.StateDir, "hyperkit.pid"), "hyperkit"); err != nil {
+	if err := s.ProcManager.SafeKill(filepath.Join(s.Config.StateDir, "hyperkit.pid"), "hyperkit"); err != nil {
 		reterr = errors.SafeWrap(err, "failed to kill hyperkit")
 	}
 
@@ -62,7 +62,7 @@ func (s *Stop) RunE(cmd *cobra.Command, args []string) error {
 	}
 
 	if reterr != nil {
-		return errors.SafeWrap(err, "cf dev stop")
+		return errors.SafeWrap(reterr, "cf dev stop")
 	}
 	return nil
 }
