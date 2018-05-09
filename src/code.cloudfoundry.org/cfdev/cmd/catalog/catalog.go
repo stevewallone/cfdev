@@ -1,4 +1,4 @@
-package cmd
+package catalog
 
 import (
 	"encoding/json"

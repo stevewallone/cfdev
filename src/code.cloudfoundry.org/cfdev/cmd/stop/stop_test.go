@@ -1,4 +1,4 @@
-package cmd_test
+package stop_test
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/cfdev/cfanalytics"
-	"code.cloudfoundry.org/cfdev/cmd"
+	"code.cloudfoundry.org/cfdev/cmd/stop"
 	"code.cloudfoundry.org/cfdev/config"
 	"code.cloudfoundry.org/cfdev/process"
 	. "github.com/onsi/ginkgo"
@@ -71,7 +71,13 @@ var _ = Describe("Stop", func() {
 
 		mockCfdevdClient = &MockCfdevdClient{}
 
-		stopCmd = cmd.NewStop(cfg, mockLaunchd, mockCfdevdClient, &MockProcManager{})
+		subject := &stop.Stop{
+			Config:       cfg,
+			Launchd:      mockLaunchd,
+			ProcManager:  &MockProcManager{},
+			CfdevdClient: mockCfdevdClient,
+		}
+		stopCmd = subject.Cmd()
 		stopCmd.SetArgs([]string{})
 		stopCmd.SetOutput(GinkgoWriter)
 	})
