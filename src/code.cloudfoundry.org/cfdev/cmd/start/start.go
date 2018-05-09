@@ -42,23 +42,19 @@ type Start struct {
 	Config      config.Config
 	Launchd     Launchd
 	ProcManager ProcManager
-}
-
-type StartArgs struct {
-	Registries  string
-	DepsIsoPath string
-	Cpus        int
-	Mem         int
+	StartArgs   struct {
+		Registries  string
+		DepsIsoPath string
+		Cpus        int
+		Mem         int
+	}
 }
 
 func (s *Start) Cmd() *cobra.Command {
-	startArgs := StartArgs{}
-
 	cmd := &cobra.Command{
 		Use: "start",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := s.Run(startArgs)
-			if err != nil {
+			if err := s.Run(cmd, args); err != nil {
 				return errors.SafeWrap(err, "cf dev start")
 			}
 			return nil
@@ -66,14 +62,15 @@ func (s *Start) Cmd() *cobra.Command {
 	}
 
 	pf := cmd.PersistentFlags()
-	pf.StringVarP(&startArgs.DepsIsoPath, "file", "f", "", "path to .dev file containing bosh & cf bits")
-	pf.StringVarP(&startArgs.Registries, "registries", "r", "", "docker registries that skip ssl validation - ie. host:port,host2:port2")
-	pf.IntVarP(&startArgs.Cpus, "cpus", "c", 4, "cpus to allocate to vm")
-	pf.IntVarP(&startArgs.Mem, "memory", "m", 4096, "memory to allocate to vm in MB")
+	pf.StringVarP(&s.StartArgs.DepsIsoPath, "file", "f", "", "path to .dev file containing bosh & cf bits")
+	pf.StringVarP(&s.StartArgs.Registries, "registries", "r", "", "docker registries that skip ssl validation - ie. host:port,host2:port2")
+	pf.IntVarP(&s.StartArgs.Cpus, "cpus", "c", 4, "cpus to allocate to vm")
+	pf.IntVarP(&s.StartArgs.Mem, "memory", "m", 4096, "memory to allocate to vm in MB")
+
 	return cmd
 }
 
-func (s *Start) Run(args StartArgs) error {
+func (s *Start) RunE(cmd *cobra.Command, args []string) error {
 	go func() {
 		select {
 		case <-s.Exit:
