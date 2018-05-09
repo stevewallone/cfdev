@@ -10,9 +10,8 @@ type Version struct {
 	Config config.Config
 }
 
-func (v *Version) Run() error {
+func (v *Version) Run() {
 	v.UI.Say("Version: %s", v.Config.CliVersion.Original)
-	return nil
 }
 
 func (v *Version) Cmd() *cobra.Command {

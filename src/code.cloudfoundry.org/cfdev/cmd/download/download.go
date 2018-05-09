@@ -20,24 +20,36 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewDownload(Exit chan struct{}, UI UI, Config config.Config) *cobra.Command {
-	cmd := &cobra.Command{
-		Use: "download",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			go func() {
-				<-Exit
-				os.Exit(128)
-			}()
+type UI interface {
+	Say(message string, args ...interface{})
+	Writer() io.Writer
+}
 
-			if err := env.Setup(Config); err != nil {
-				return errors.SafeWrap(err, "setup for download")
-			}
+type Download struct {
+	Exit   chan struct{}
+	UI     UI
+	Config config.Config
+}
 
-			UI.Say("Downloading Resources...")
-			return download(Config.Dependencies, Config.CacheDir, UI.Writer())
-		},
+func (d *Download) Cmd() *cobra.Command {
+	return &cobra.Command{
+		Use:  "download",
+		RunE: d.RunE,
 	}
-	return cmd
+}
+
+func (d *Download) RunE(cmd *cobra.Command, args []string) error {
+	go func() {
+		<-d.Exit
+		os.Exit(128)
+	}()
+
+	if err := env.Setup(d.Config); err != nil {
+		return errors.SafeWrap(err, "setup for download")
+	}
+
+	d.UI.Say("Downloading Resources...")
+	return download(d.Config.Dependencies, d.Config.CacheDir, d.UI.Writer())
 }
 
 func download(dependencies resource.Catalog, cacheDir string, writer io.Writer) error {
