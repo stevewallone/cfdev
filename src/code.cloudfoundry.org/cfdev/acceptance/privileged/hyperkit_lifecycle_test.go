@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -187,28 +188,6 @@ func downloadTestAsset(targetDir string, resourceUrl string) error {
 
 	return nil
 }
-<<<<<<< HEAD
-
-func FullCleanup() {
-	out, err := exec.Command("ps", "aux").Output()
-	Expect(err).NotTo(HaveOccurred())
-	for _, line := range strings.Split(string(out), "\n") {
-		if strings.Contains(line, "linuxkit") || strings.Contains(line, "hyperkit") || strings.Contains(line, "vpnkit") {
-			cols := strings.Fields(line)
-			pid, err := strconv.Atoi(cols[1])
-			if err == nil && pid > 0 {
-				syscall.Kill(pid, syscall.SIGKILL)
-			}
-		}
-	}
-	out, err = exec.Command("ps", "aux").Output()
-	Expect(err).NotTo(HaveOccurred())
-	for _, line := range strings.Split(string(out), "\n") {
-		if strings.Contains(line, "linuxkit") || strings.Contains(line, "hyperkit") || strings.Contains(line, "vpnkit") {
-			fmt.Printf("WARNING: one of the 'kits' processes are was still running: %s", line)
-		}
-	}
-}
 
 func PushAnApp() {
 	server, port := fakeTcpServer()
@@ -269,5 +248,3 @@ func httpGet(url string) (string, error) {
 	b, err := ioutil.ReadAll(resp.Body)
 	return string(b), err
 }
-=======
->>>>>>> wip
