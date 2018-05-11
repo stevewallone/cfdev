@@ -10,14 +10,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type LaunchdStop interface {
-	Stop(label string) error
+//go:generate mockgen -package mocks -destination mocks/launchd.go code.cloudfoundry.org/cfdev/cmd/stop Launchd
+type Launchd interface {
+	RemoveDaemon(label string) error
 }
 
+//go:generate mockgen -package mocks -destination mocks/cfdevd_client.go code.cloudfoundry.org/cfdev/cmd/stop CfdevdClient
 type CfdevdClient interface {
 	Uninstall() (string, error)
 }
 
+//go:generate mockgen -package mocks -destination mocks/process_manager.go code.cloudfoundry.org/cfdev/cmd/stop ProcManager
 type ProcManager interface {
 	SafeKill(string, string) error
 }
@@ -26,11 +29,17 @@ type UI interface {
 	Say(message string, args ...interface{})
 }
 
+//go:generate mockgen -package mocks -destination mocks/analytics.go code.cloudfoundry.org/cfdev/cmd/stop Analytics
+type Analytics interface {
+	Event(string, map[string]interface{}) error
+}
+
 type Stop struct {
 	Config       config.Config
-	Launchd      LaunchdStop
+	Launchd      Launchd
 	ProcManager  ProcManager
 	CfdevdClient CfdevdClient
+	Analytics    Analytics
 }
 
 func (s *Stop) Cmd() *cobra.Command {
@@ -41,15 +50,15 @@ func (s *Stop) Cmd() *cobra.Command {
 }
 
 func (s *Stop) RunE(cmd *cobra.Command, args []string) error {
-	s.Config.Analytics.Event(cfanalytics.STOP, map[string]interface{}{"type": "cf"})
+	s.Analytics.Event(cfanalytics.STOP, map[string]interface{}{"type": "cf"})
 
 	var reterr error
 
-	if err := s.Launchd.Stop(process.LinuxKitLabel); err != nil {
+	if err := s.Launchd.RemoveDaemon(process.LinuxKitLabel); err != nil {
 		reterr = errors.SafeWrap(err, "failed to stop linuxkit")
 	}
 
-	if err := s.Launchd.Stop(process.VpnKitLabel); err != nil {
+	if err := s.Launchd.RemoveDaemon(process.VpnKitLabel); err != nil {
 		reterr = errors.SafeWrap(err, "failed to stop vpnkit")
 	}
 

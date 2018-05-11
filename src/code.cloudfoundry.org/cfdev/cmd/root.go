@@ -77,6 +77,7 @@ func NewRoot(exit chan struct{}, ui UI, config config.Config, launchd Launchd) *
 		},
 		&b6.Stop{
 			Config:       config,
+			Analytics:    config.Analytics,
 			Launchd:      launchd,
 			ProcManager:  &process.Manager{},
 			CfdevdClient: cfdevdClient.New("CFD3V", config.CFDevDSocketPath),

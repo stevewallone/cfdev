@@ -7,52 +7,24 @@ import (
 
 	"code.cloudfoundry.org/cfdev/cfanalytics"
 	"code.cloudfoundry.org/cfdev/cmd/stop"
+	"code.cloudfoundry.org/cfdev/cmd/stop/mocks"
 	"code.cloudfoundry.org/cfdev/config"
 	"code.cloudfoundry.org/cfdev/process"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/cobra"
 )
 
-type MockClient struct{}
-
-func (mc *MockClient) Event(string, map[string]interface{}) error      { return nil }
-func (mc *MockClient) Close()                                          {}
-func (mc *MockClient) PromptOptIn(chan struct{}, cfanalytics.UI) error { return nil }
-
-type MockLaunchdStop struct {
-	stopLabels []string
-	returns    map[string]error
-}
-
-func (m *MockLaunchdStop) Stop(label string) error {
-	m.stopLabels = append(m.stopLabels, label)
-	if v, ok := m.returns[label]; ok {
-		return v
-	}
-	return nil
-}
-
-type MockCfdevdClient struct {
-	uninstallWasCalled bool
-	returns            error
-}
-
-func (m *MockCfdevdClient) Uninstall() (string, error) {
-	m.uninstallWasCalled = true
-	return "", m.returns
-}
-
-type MockProcManager struct{}
-
-func (mp *MockProcManager) SafeKill(pidfile, match string) error { return nil }
-
 var _ = Describe("Stop", func() {
 	var (
 		cfg              config.Config
 		stopCmd          *cobra.Command
-		mockLaunchd      *MockLaunchdStop
-		mockCfdevdClient *MockCfdevdClient
+		mockLaunchd      *mocks.MockLaunchd
+		mockProcManager  *mocks.MockProcManager
+		mockCfdevdClient *mocks.MockCfdevdClient
+		mockAnalytics    *mocks.MockAnalytics
+		mockController   *gomock.Controller
 		stateDir         string
 		err              error
 	)
@@ -62,19 +34,20 @@ var _ = Describe("Stop", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		cfg = config.Config{
-			Analytics: &MockClient{},
-			StateDir:  stateDir,
-		}
-		mockLaunchd = &MockLaunchdStop{
-			returns: make(map[string]error, 0),
+			StateDir: stateDir,
 		}
 
-		mockCfdevdClient = &MockCfdevdClient{}
+		mockController = gomock.NewController(GinkgoT())
+		mockLaunchd = mocks.NewMockLaunchd(mockController)
+		mockProcManager = mocks.NewMockProcManager(mockController)
+		mockCfdevdClient = mocks.NewMockCfdevdClient(mockController)
+		mockAnalytics = mocks.NewMockAnalytics(mockController)
 
 		subject := &stop.Stop{
 			Config:       cfg,
+			Analytics:    mockAnalytics,
 			Launchd:      mockLaunchd,
-			ProcManager:  &MockProcManager{},
+			ProcManager:  mockProcManager,
 			CfdevdClient: mockCfdevdClient,
 		}
 		stopCmd = subject.Cmd()
@@ -83,60 +56,62 @@ var _ = Describe("Stop", func() {
 	})
 
 	AfterEach(func() {
+		mockController.Finish()
 		os.RemoveAll(stateDir)
 	})
 
-	It("stops linuxkt", func() {
+	It("uninstalls linuxkt, vpnkit, and cfdevd, and sends analytics event", func() {
+		mockAnalytics.EXPECT().Event(cfanalytics.STOP, map[string]interface{}{"type": "cf"})
+		mockLaunchd.EXPECT().RemoveDaemon(process.LinuxKitLabel)
+		mockLaunchd.EXPECT().RemoveDaemon(process.VpnKitLabel)
+		mockProcManager.EXPECT().SafeKill(gomock.Any(), "hyperkit")
+		mockCfdevdClient.EXPECT().Uninstall()
 		Expect(stopCmd.Execute()).To(Succeed())
-		Expect(mockLaunchd.stopLabels).To(ContainElement(process.LinuxKitLabel))
-	})
-
-	It("stops vpnkit", func() {
-		Expect(stopCmd.Execute()).To(Succeed())
-		Expect(mockLaunchd.stopLabels).To(ContainElement(process.VpnKitLabel))
-	})
-
-	It("stops cfdevd", func() {
-		Expect(stopCmd.Execute()).To(Succeed())
-		Expect(mockCfdevdClient.uninstallWasCalled).To(BeTrue())
 	})
 
 	Context("stopping linuxkit fails", func() {
-		BeforeEach(func() {
-			mockLaunchd.returns[process.LinuxKitLabel] = fmt.Errorf("test")
-		})
 		It("stops the others and returns linuxkit error", func() {
-			Expect(stopCmd.Execute()).To(MatchError("cf dev stop: failed to stop linuxkit: test"))
+			mockAnalytics.EXPECT().Event(cfanalytics.STOP, map[string]interface{}{"type": "cf"})
+			mockLaunchd.EXPECT().RemoveDaemon(process.VpnKitLabel)
+			mockLaunchd.EXPECT().RemoveDaemon(process.LinuxKitLabel).Return(fmt.Errorf("test"))
+			mockProcManager.EXPECT().SafeKill(gomock.Any(), "hyperkit")
+			mockCfdevdClient.EXPECT().Uninstall()
 
-			Expect(mockLaunchd.stopLabels).To(ContainElement(process.LinuxKitLabel))
-			Expect(mockLaunchd.stopLabels).To(ContainElement(process.VpnKitLabel))
-			Expect(mockCfdevdClient.uninstallWasCalled).To(BeTrue())
+			Expect(stopCmd.Execute()).To(MatchError("cf dev stop: failed to stop linuxkit: test"))
 		})
 	})
 
 	Context("stopping vpnkit fails", func() {
-		BeforeEach(func() {
-			mockLaunchd.returns[process.VpnKitLabel] = fmt.Errorf("test")
-		})
 		It("stops the others and returns vpnkit error", func() {
+			mockAnalytics.EXPECT().Event(cfanalytics.STOP, map[string]interface{}{"type": "cf"})
+			mockLaunchd.EXPECT().RemoveDaemon(process.LinuxKitLabel)
+			mockLaunchd.EXPECT().RemoveDaemon(process.VpnKitLabel).Return(fmt.Errorf("test"))
+			mockProcManager.EXPECT().SafeKill(gomock.Any(), "hyperkit")
+			mockCfdevdClient.EXPECT().Uninstall()
 			Expect(stopCmd.Execute()).To(MatchError("cf dev stop: failed to stop vpnkit: test"))
+		})
+	})
 
-			Expect(mockLaunchd.stopLabels).To(ContainElement(process.LinuxKitLabel))
-			Expect(mockLaunchd.stopLabels).To(ContainElement(process.VpnKitLabel))
-			Expect(mockCfdevdClient.uninstallWasCalled).To(BeTrue())
+	Context("stopping hyperkit fails", func() {
+		It("stops the others and returns vpnkit error", func() {
+			mockAnalytics.EXPECT().Event(cfanalytics.STOP, map[string]interface{}{"type": "cf"})
+			mockLaunchd.EXPECT().RemoveDaemon(process.LinuxKitLabel)
+			mockLaunchd.EXPECT().RemoveDaemon(process.VpnKitLabel)
+			mockProcManager.EXPECT().SafeKill(gomock.Any(), "hyperkit").Return(fmt.Errorf("test"))
+			mockCfdevdClient.EXPECT().Uninstall()
+			Expect(stopCmd.Execute()).To(MatchError("cf dev stop: failed to kill hyperkit: test"))
 		})
 	})
 
 	Context("stopping cfdevd fails", func() {
-		BeforeEach(func() {
-			mockCfdevdClient.returns = fmt.Errorf("test")
-		})
 		It("stops the others and returns cfdevd error", func() {
-			Expect(stopCmd.Execute()).To(MatchError("cf dev stop: failed to uninstall cfdevd: test"))
+			mockAnalytics.EXPECT().Event(cfanalytics.STOP, map[string]interface{}{"type": "cf"})
+			mockLaunchd.EXPECT().RemoveDaemon(process.LinuxKitLabel)
+			mockLaunchd.EXPECT().RemoveDaemon(process.VpnKitLabel)
+			mockProcManager.EXPECT().SafeKill(gomock.Any(), "hyperkit")
+			mockCfdevdClient.EXPECT().Uninstall().Return("test", fmt.Errorf("test"))
 
-			Expect(mockLaunchd.stopLabels).To(ContainElement(process.LinuxKitLabel))
-			Expect(mockLaunchd.stopLabels).To(ContainElement(process.VpnKitLabel))
-			Expect(mockCfdevdClient.uninstallWasCalled).To(BeTrue())
+			Expect(stopCmd.Execute()).To(MatchError("cf dev stop: failed to uninstall cfdevd: test"))
 		})
 	})
 })
