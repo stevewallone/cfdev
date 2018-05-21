@@ -2,6 +2,7 @@ package garden
 
 import (
 	"fmt"
+	"os"
 
 	"code.cloudfoundry.org/cfdev/errors"
 	"code.cloudfoundry.org/garden"
@@ -34,11 +35,14 @@ func DeployBosh(client garden.Client) error {
 		return err
 	}
 
+	out := singleLineReporter(os.Stdout)
 	process, err := container.Run(garden.ProcessSpec{
 		ID:   "deploy-bosh",
 		Path: "/usr/bin/deploy-bosh",
 		User: "root",
-	}, garden.ProcessIO{})
+	}, garden.ProcessIO{
+		Stdout: out,
+	})
 
 	if err != nil {
 		return err
@@ -48,6 +52,8 @@ func DeployBosh(client garden.Client) error {
 	if err != nil {
 		return err
 	}
+
+	out.Close()
 
 	if exitCode != 0 {
 		return errors.SafeWrap(nil, fmt.Sprintf("process exited with status %v", exitCode))
