@@ -12,11 +12,7 @@ init:
   - pivotal/expose-multiple-ports:dev
   - pivotal/openssl:dev
 onboot:
-  - name: dhcpcd
-    image: linuxkit/dhcpcd:48831507404049660b960e4055f544917d90378e
-    command: ["/sbin/dhcpcd", "--nobackground", "-f", "/dhcpcd.conf", "-1"]
-
-   # Format and mount the disk image in /var/lib
+  # Format and mount the disk image in /var/lib
   - name: format
     image: linuxkit/format:6b46d0450082f397177da36be6b4d74d93eacd1e
   - name: mount
@@ -28,12 +24,16 @@ onboot:
     image: linuxkit/swap:25a2f13110585f3d964a8191fa3a84de51dbb8fd
     command: ["/swap.sh", "--path", "/var/lib/swap", "--size", "1024M"]
 
+  - name: dhcpcd
+    image: pivotal/dhcpcd:dev
+    command: ["/sbin/dhcpcd", "--nobackground", "-f", "/dhcpcd.conf"]
+
   - name: mount-vpnkit
     image: alpine:3.6
     binds:
-        - /var/:/host_var:rbind,rshared
+      - /var/:/host_var:rbind,rshared
     capabilities:
-        - CAP_SYS_ADMIN
+      - CAP_SYS_ADMIN
     rootfsPropagation: shared
     command: ["sh", "-c", "mkdir /host_var/vpnkit && mount -v -t 9p -o trans=virtio,dfltuid=1001,dfltgid=50,version=9p2000 port /host_var/vpnkit"]
 
@@ -45,7 +45,7 @@ services:
     image: linuxkit/vpnkit-forwarder:c7e61d9250de0b21455dc5c8bb885bd8faa31621
     net: host
     binds:
-        - /var/vpnkit:/port
+      - /var/vpnkit:/port
     command: ["/vpnkit-forwarder"]
 
 trust:

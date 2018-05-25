@@ -26,6 +26,7 @@ linuxkit_dir="$script_dir"/../linuxkit
 mkdir -p "$output_dir"
 
 "$linuxkit" pkg build -hash dev "$linuxkit_dir"/pkg/bosh-lite-routing
+"$linuxkit" pkg build -hash dev "$linuxkit_dir"/pkg/dhcpcd
 "$linuxkit" pkg build -hash dev "$linuxkit_dir"/pkg/expose-multiple-ports
 "$linuxkit" pkg build -hash dev "$linuxkit_dir"/pkg/garden-runc
 "$linuxkit" pkg build -hash dev "$linuxkit_dir"/pkg/openssl
