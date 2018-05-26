@@ -40,6 +40,14 @@ func NewWithDirector(dir boshdir.Director) *Bosh {
 	return &Bosh{dir: dir}
 }
 
+func (b *Bosh) UploadRelease(f boshdir.UploadFile) error {
+	return b.dir.UploadReleaseFile(f, false, false)
+}
+
+func (b *Bosh) UploadStemcell(f boshdir.UploadFile) error {
+	return b.dir.UploadStemcellFile(f, false)
+}
+
 type VMProgress struct {
 	Releases int
 	Total    int

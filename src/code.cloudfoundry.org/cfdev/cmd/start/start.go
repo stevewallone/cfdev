@@ -24,6 +24,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden/client"
 	"code.cloudfoundry.org/garden/client/connection"
+	"github.com/hooklift/iso9660"
 	"github.com/spf13/cobra"
 )
 
@@ -184,7 +185,16 @@ func (s *Start) RunE(_ *cobra.Command, _ []string) error {
 	}
 
 	s.UI.Say("Deploying CF...")
-	go reportCfDeployProgress(s.UI, garden)
+	b, err := bosh.New(garden)
+	if err != nil {
+		return errors.SafeWrap(err, "Failed to connect to the BOSH Director")
+	}
+	ui := singlelinewriter.New(s.UI.Writer())
+	if err := uploadReleases(b, ui.Say); err != nil {
+		return errors.SafeWrap(err, "Uploading Releases")
+	}
+	ui.Close()
+	go reportCfDeployProgress(s.UI, b)
 	if err := gdn.DeployCloudFoundry(garden, registries); err != nil {
 		return errors.SafeWrap(err, "Failed to deploy the Cloud Foundry")
 	}
@@ -283,20 +293,65 @@ func (s *Start) watchLaunchd(label string) {
 	}()
 }
 
-func reportCfDeployProgress(UI UI, garden client.Client) {
-	ui := singlelinewriter.New(UI.Writer())
-	ui.Say("  Uploading Releases")
-	b, err := bosh.New(garden)
-	if err == nil {
-		ch := b.VMProgress()
-		for p := range ch {
-			if p.Total > 0 {
-				ui.Say("  Progress: %d of %d (%s)", p.Done, p.Total, p.Duration.Round(time.Second))
-			} else {
-				ui.Say("  Uploaded Releases: %d (%s)", p.Releases, p.Duration.Round(time.Second))
+type fileUpload struct {
+	r io.Reader
+	f os.FileInfo
+}
+
+func (f *fileUpload) Read(p []byte) (n int, err error) { return f.r.Read(p) }
+func (f *fileUpload) Close() error                     { return nil }
+func (f *fileUpload) Stat() (os.FileInfo, error)       { return f.f, nil }
+
+func uploadReleases(b *bosh.Bosh, say func(message string, args ...interface{})) error {
+	start := time.Now()
+	file, err := os.Open("/Users/dgodd/.cfdev/cache/cf-deps.iso")
+	if err != nil {
+		return err
+	}
+	r, err := iso9660.NewReader(file)
+	if err != nil {
+		return err
+	}
+	releases := make([]*fileUpload, 0, 0)
+	for {
+		f, err := r.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		if strings.HasPrefix(f.Name(), "/releases/") && strings.HasSuffix(f.Name(), ".tgz") {
+			releases = append(releases, &fileUpload{r: f.Sys().(io.Reader), f: f})
+		} else if f.Name() == "/bosh_ste.tgz" {
+			say("  Upload Stemcell")
+			fileUpload := &fileUpload{r: f.Sys().(io.Reader), f: f}
+			if err := b.UploadStemcell(fileUpload); err != nil {
+				return err
 			}
 		}
-		ui.Close()
-		UI.Say("  Setup CF")
 	}
+	for idx, fileUpload := range releases {
+		say("  Upload Release: %d of %d (%s)", idx+1, len(releases), time.Now().Sub(start).Round(time.Second))
+		if err := b.UploadRelease(fileUpload); err != nil {
+			return err
+		}
+	}
+	file.Close()
+	return nil
+}
+
+func reportCfDeployProgress(UI UI, b *bosh.Bosh) {
+	ui := singlelinewriter.New(UI.Writer())
+	ui.Say("  Uploading Releases")
+	ch := b.VMProgress()
+	for p := range ch {
+		if p.Total > 0 {
+			ui.Say("  Progress: %d of %d (%s)", p.Done, p.Total, p.Duration.Round(time.Second))
+		} else {
+			ui.Say("  Uploaded Releases: %d (%s)", p.Releases, p.Duration.Round(time.Second))
+		}
+	}
+	ui.Close()
+	UI.Say("  Setup CF")
 }
