@@ -12,6 +12,11 @@ init:
   - pivotal/expose-multiple-ports:dev
   - pivotal/openssl:dev
 onboot:
+  - name: dhcpcd
+    image: pivotal/dhcpcd:dev
+    # command: ["/sbin/dhcpcd", "--nobackground", "-f", "/dhcpcd.conf"]
+    command: ["sh", "-c", "ifconfig eth0 192.168.64.3 netmask 255.255.255.0 && route add default gw 192.168.64.1 eth0 && echo '--- do mtu ---' && /usr/lib/dhcpcd/dhcpcd-hook/10-mtu"]
+
   # Format and mount the disk image in /var/lib
   - name: format
     image: linuxkit/format:6b46d0450082f397177da36be6b4d74d93eacd1e
@@ -23,10 +28,6 @@ onboot:
   - name: swap
     image: linuxkit/swap:25a2f13110585f3d964a8191fa3a84de51dbb8fd
     command: ["/swap.sh", "--path", "/var/lib/swap", "--size", "1024M"]
-
-  - name: dhcpcd
-    image: pivotal/dhcpcd:dev
-    command: ["/sbin/dhcpcd", "--nobackground", "-f", "/dhcpcd.conf"]
 
   - name: mount-vpnkit
     image: alpine:3.6
