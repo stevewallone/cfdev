@@ -63,7 +63,7 @@ compile_releases () {
     bosh -n deploy -d cf <(echo "$compilation_manifest")
     for release in $(echo $releases_to_compile | jq -c .[]) ; do
         bosh -d cf export-release "$(name "$release")/$(version "$release")" ubuntu-trusty/"$(stemcell_version)" --dir "$tmpdir"
-        mv "$tmpdir"/"$(name "$release")-$(version "$release")"-*.tgz "$tmpdir"/"$(filename $release)"
+        mv "$tmpdir"/"$(name "$release")-$(version "$release")"-*.tgz "$tmpdir"/releases/"$(filename $release)"
     done
 }
 
