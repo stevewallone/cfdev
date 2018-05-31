@@ -6,7 +6,7 @@ while getopts "c:b:m:" arg; do
   case $arg in
     c) cf_deps=$OPTARG
       ;;
-    m) myqsl_deps=$OPTARG
+    m) mysql_deps=$OPTARG
       ;;
     b) bosh_deps=$OPTARG
   esac
