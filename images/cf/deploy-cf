@@ -33,6 +33,13 @@ for filename in "$CACHE_DIR"/releases/*.tgz; do
   bosh --tty upload-release "$filename"
 done
 
+## TODO move deploy mysql below deploy cf
+bosh --tty --non-interactive --deployment cf \
+  deploy "${CF_DIR}/deployment.yml" \
+  -v system_domain="${CF_DOMAIN}" \
+  -v insecure_docker_registries="${DOCKER_REGISTRIES}" \
+  --no-redact
+
 if [ "$(curl -s -k "https://$BOSH_ENVIRONMENT:25555/info" | jq '.features.config_server.status')" == "true" ]; then
   bosh --tty --non-interactive --deployment cf \
     deploy "${CF_DIR}/deployment.yml" \
