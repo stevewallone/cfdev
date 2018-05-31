@@ -255,7 +255,7 @@ trap "{ \
 
 run_cats $@
 run_networking_tests $@
-run_routing_tests $@
+# run_routing_tests $@
 #run_persi_tests $@
 
 # Docker registry will run on a local IP so we
