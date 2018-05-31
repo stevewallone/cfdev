@@ -34,7 +34,7 @@ trap cleanup EXIT
 source "$dir"/build-deps-tar-helpers
 
 tar_deps () {
-  cp "$manifest" "$tmpdir"/deployment.yml
+  cp "$manifest" "$tmpdir"/mysql.yml
   pushd "$tmpdir"
     tar cvzf "$output_dir"/mysql.tgz *
   popd
