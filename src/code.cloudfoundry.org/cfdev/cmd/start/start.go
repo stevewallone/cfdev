@@ -290,6 +290,7 @@ func (s *Start) watchLaunchd(label string) {
 }
 
 func reportDeployProgress(UI UI, garden client.Client, deploymentName string) {
+	start := time.Now()
 	ui := singlelinewriter.New(UI.Writer())
 	ui.Say("  Uploading Releases")
 	b, err := bosh.New(garden)
@@ -303,6 +304,6 @@ func reportDeployProgress(UI UI, garden client.Client, deploymentName string) {
 			}
 		}
 		ui.Close()
-		UI.Say("  Setup CF")
+		UI.Say("  Done (%s)", time.Now().Sub(start).Round(time.Second))
 	}
 }
