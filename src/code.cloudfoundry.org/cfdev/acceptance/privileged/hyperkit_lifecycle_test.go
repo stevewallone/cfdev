@@ -193,7 +193,7 @@ func PushAnApp() {
 	server, port := fakeTcpServer()
 	defer server.Close()
 
-	Eventually(cf.Cf("push", "cf-test-app", "--no-start", "-p", "./fixture", "-b", "ruby_buildpack", "-c", "./app"), 120).Should(gexec.Exit(0))
+	Eventually(cf.Cf("push", "cf-test-app", "--no-start", "-p", "./fixture", "-b", "ruby_buildpack"), 120).Should(gexec.Exit(0))
 	Eventually(cf.Cf("set-env", "cf-test-app", "HOST_SERVER_PORT", strconv.Itoa(port)), 120).Should(gexec.Exit(0))
 	Eventually(cf.Cf("create-service", "p-mysql", "10mb", "mydb"), 120).Should(gexec.Exit(0))
 	Eventually(cf.Cf("bind-service", "cf-test-app", "mydb"), 120).Should(gexec.Exit(0))
