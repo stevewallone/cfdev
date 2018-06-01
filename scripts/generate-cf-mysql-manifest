@@ -33,6 +33,7 @@ bosh int cf-mysql-deployment.yml \
   -o operations/no-arbitrator.yml \
   \
   -o "$ops_dir"/single-instances.yml \
+  -o "$ops_dir"/use-stemcell-3586.16.yml \
   \
   -v cf_mysql_external_host=p-mysql.v3.pcfdev.io \
   -v cf_mysql_host=v3.pcfdev.io \
