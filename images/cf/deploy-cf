@@ -34,10 +34,6 @@ for filename in "$CACHE_DIR"/bosh-stemcell-*.tgz; do
   bosh --tty upload-stemcell "$filename"
 done
 
-for filename in "$CACHE_DIR"/releases/*.tgz; do
-  bosh --tty upload-release "$filename"
-done
-
 if [ "$(curl -s -k "https://$BOSH_ENVIRONMENT:25555/info" | jq '.features.config_server.status')" == "true" ]; then
   bosh --tty --non-interactive --deployment cf \
     deploy "${CF_DIR}/deployment.yml" \
