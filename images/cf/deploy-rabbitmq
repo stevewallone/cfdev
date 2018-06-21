@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -e
+
+export CACHE_DIR=${CACHE_DIR:-/var/vcap/cache}
+
+exec 2>&1
+
+source /var/vcap/director/env
+
+## TODO rabbit-test.yml is wrong
+bosh deploy -n -d rabbitmq-on-demand-broker-pcfdev \
+  rabbit-test.yml \
+  --vars-store=varstore.yml \
+  -v system_domain=v3.pcfdev.io \
+  --var-file bosh_ca_cert=<(bosh int /var/vcap/director/creds.yml --path=/default_ca/ca) \
+  -v pcfdev-bosh-password="$(bosh int /var/vcap/director/creds.yml --path=/admin_password)"
+
+bosh -d rabbitmq-on-demand-broker-pcfdev run-errand register-broker
