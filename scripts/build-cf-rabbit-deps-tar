@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+
+set -ex
+
+while getopts "m:s:" arg; do
+  case $arg in
+    m) manifest="$OPTARG"
+      ;;
+    s) stemcell_version="$OPTARG"
+      ;;
+  esac
+done
+
+if [[ -z $manifest ]]; then
+  echo "USAGE: build-cf-rabbit-deps-tar -m <path-to-cf-rabbit-manifest> -s <stemcell version>"
+  exit 2
+fi
+if [[ -z $stemcell_version ]]; then
+  echo "USAGE: build-cf-rabbit-deps-tar -m <path-to-cf-rabbit-manifest> -s <stemcell version>"
+  exit 2
+fi
+if [[ ! -f $manifest ]]; then
+  echo "ERROR: $manifest does not exist"
+  exit 2
+fi
+manifest="$(cd "$(dirname "$manifest")"; pwd)/$(basename "$manifest")"
+
+if [[ -z "$BOSH_ENVIRONMENT" ]]; then
+  echo "ERROR: a bosh director is required to compile releases, please set your BOSH_* env variables"
+  exit 3
+fi
+ 
+dir="$(cd "$( dirname $0)" && pwd)"
+output_dir="$dir"/../output
+tmpdir="$(mktemp -d)"
+release_dir=${tmpdir}/output 
+#trap cleanup EXIT
+mkdir -p $release_dir/bin
+
+# cleanup () {
+#   rm -rf "$tmpdir"
+# }
+ 
+download_warden_stemcell () {
+  pushd "${release_dir}" > /dev/null
+    wget "https://s3.amazonaws.com/bosh-core-stemcells/warden/bosh-stemcell-${1}-warden-boshlite-ubuntu-trusty-go_agent.tgz"
+  popd > /dev/null
+}
+
+compilation_manifest_template="$(cat <<EOF
+---
+instance_groups: []
+name: cf
+stemcells:
+- alias: default
+  os: ubuntu-trusty
+  version: ${stemcell_version}
+update:
+  canaries: 1
+  canary_watch_time: 30000-1200000
+  max_in_flight: 1
+  update_watch_time: 5000-1200000
+EOF
+)"
+
+name () {
+  echo "$1" | jq -r .name
+}
+
+version () {
+  echo "$1" | jq -r .version
+}
+
+compile_releases () {
+    releases_to_compile="$(rq -y <"$1" | jq -c '[.releases[] | select(has("url"))]')"
+ 
+    compilation_manifest="$(echo "$compilation_manifest_template" | rq -y | jq ".releases=$releases_to_compile" | rq -Y)"
+  
+    bosh upload-stemcell "https://s3.amazonaws.com/bosh-gce-light-stemcells/light-bosh-stemcell-${2}-google-kvm-ubuntu-trusty-go_agent.tgz"
+    bosh -n deploy -d cf <(echo "$compilation_manifest")
+    mkdir -p $tmpdir/releases
+    for release in $(echo $releases_to_compile | jq -c .[]) ; do
+      bosh -d cf export-release "$(name "$release")/$(version "$release")" ubuntu-trusty/"${2}" --dir "$tmpdir"
+      mv "$tmpdir"/"$(name "$release")-$(version "$release")"-*.tgz "$tmpdir"/releases/"$(filename $release)"
+    done
+}
+
+copy_releases () { 
+  mkdir -p ${1}
+  cp /Users/pivotal/workspace/rabbit-tile/releases/cf-rabbitmq-[0-9]*.tgz ${1}
+  cp /Users/pivotal/workspace/rabbit-tile/releases/rabbitmq-on-demand-adapter-[0-9]*.tgz ${1}
+  cp /Users/pivotal/workspace/rabbit-tile/releases/on-demand-service-broker-[0-9]*.tgz ${1}
+}
+
+tar_deps () {
+  cp /Users/pivotal/workspace/cfdev-ci/tasks/build-rabbitmq-deps-tar/deploy-rabbitmq $release_dir/bin/deploy-rabbitmq
+
+  pushd "${release_dir}" > /dev/null
+    tar cvzf "${output_dir}/rabbitmq.tgz" .
+  popd > /dev/null
+}
+
+main() { 
+  download_warden_stemcell ${stemcell_version}
+  compile_releases "${output_dir}"/rabbitmq.yml ${stemcell_version}
+  copy_releases ${release_dir}
+  tar_deps
+}
+
+main

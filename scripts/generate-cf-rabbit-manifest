@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+set -ex
+
+while getopts "r:c:" arg; do
+  case $arg in
+    r) rabbitadapterrelease="$OPTARG"
+      ;;
+    c) cfdevci="$OPTARG"
+      ;;
+  esac
+done
+   
+if [ ! -d ${rabbitadapterrelease} ]; then 
+   echo "ERROR: ${rabbitmqondemandadapterrelease} does not exist"
+   exit 2
+fi 
+ 
+scripts_dir="$(cd "$(dirname "$0")" && pwd)"
+output_dir="$scripts_dir"/../output
+stemcell_version=3586.16
+
+build_manifests () { 
+  bosh int ${1}/manifests/local-odb-template.yml \
+    -o ${2}/tasks/build-rabbitmq-deps-tar/rabbitmq-opps.yml \
+    -o ${2}/tasks/build-rabbitmq-deps-tar/set-cf-cli-version.yml \
+    -v deployment-name-suffix=pcfdev \
+    -v rabbit-release-name=cf-rabbitmq \
+    -v rabbit-release-version=245.0.0 \
+    -v rabbit-service-name=p.rabbitmq \
+    -v bosh-domain="((system_domain))" \
+    -v bosh-username=admin \
+    -v bosh-password=admin \
+    -v "bosh-url=https://10.245.0.2:25555" \
+    -v cf-deployment-name=cf \
+    -v cf-service-id=A8865092-7E73-4BC1-AFF1-D192CCD56BD9 \
+    -v cf-password=admin \
+    -v odb-password=password \
+    -v one-node-plan-id=87827AEC-2821-4648-B797-BA26557CD2A7 \
+    -v cluster-plan-id=62341AEC-2821-4648-B797-NB262010D2A7 \
+    -v stemcell-version=${3} \
+    -v instance-group-name=rabbitmq-server \
+    -v on-demand-service-broker-version=0.21.2 \
+    -v rabbitmq-on-demand-adapter=latest \
+    -v local-bosh-host=10.245.0.2 \
+    -v rabbitmq-on-demand-adapter-version=latest \
+    -v tls-support=optional \
+    > ${output_dir}/rabbitmq.yml  
+}
+
+compilation_manifest_template="$(cat <<EOF
+---
+instance_groups: []
+name: cf
+stemcells:
+- alias: default
+  os: ubuntu-trusty
+  version: ${stemcell_version}
+update:
+  canaries: 1
+  canary_watch_time: 30000-1200000
+  max_in_flight: 1
+  update_watch_time: 5000-1200000
+EOF
+)"
+ 
+main() { 
+    build_manifests ${rabbitadapterrelease} ${cfdevci} ${stemcell_version}
+}
+
+main

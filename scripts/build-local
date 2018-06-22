@@ -5,44 +5,52 @@ cd "$(dirname "$0")/.."
 rm -rf output
 mkdir output
 
-echo "GENERATE CLOUD CONFIG"
+# echo "GENERATE CLOUD CONFIG"
 
-./scripts/generate-cloud-config -c ../cf-deployment/
+# ./scripts/generate-cloud-config -c ../cf-deployment/
 
-echo "GENERATE CF MANIFEST"
+# echo "GENERATE CF MANIFEST"
 
-./scripts/generate-cf-manifest -c ../cf-deployment/
+# ./scripts/generate-cf-manifest -c ../cf-deployment/
 
-echo "GENERATE BOSH RUNTIME CONFIG"
+# echo "GENERATE BOSH RUNTIME CONFIG"
 
-./scripts/generate-bosh-runtime-config -b ../bosh-deployment/
+# ./scripts/generate-bosh-runtime-config -b ../bosh-deployment/
 
-echo "GENERATE CF DEPS TAR"
+# echo "GENERATE CF DEPS TAR"
 
-./scripts/build-cf-deps-tar -m output/cf.yml -c output/cloud-config.yml -r images/cf/configs/dns-runtime-config.yml -d output/dns-runtime-config.yml
+# ./scripts/build-cf-deps-tar -m output/cf.yml -c output/cloud-config.yml -r images/cf/configs/dns-runtime-config.yml -d output/dns-runtime-config.yml
 
-echo "GENERATE BOSH MANIFEST"
+# echo "GENERATE BOSH MANIFEST"
 
-./scripts/generate-bosh-manifest -b ../bosh-deployment/
+# ./scripts/generate-bosh-manifest -b ../bosh-deployment/
 
-echo "GENERATE BOSH TAR"
+# echo "GENERATE BOSH TAR"
 
-./scripts/build-bosh-deps-tar -m output/bosh.yml
+# ./scripts/build-bosh-deps-tar -m output/bosh.yml
 
-echo "GENERATE MYSQL MANIFEST"
+# echo "GENERATE MYSQL MANIFEST"
 
-./scripts/generate-cf-mysql-manifest -m ../cf-mysql-deployment/
+# ./scripts/generate-cf-mysql-manifest -m ../cf-mysql-deployment/
 
-echo "GENERATE MYSQL TAR"
+# echo "GENERATE MYSQL TAR"
 
-./scripts/build-cf-mysql-deps-tar -m output/mysql.yml
+# ./scripts/build-cf-mysql-deps-tar -m output/mysql.yml
 
-echo "GENERATE CF ISO"
+echo "GENERATE RABBITMQ MANIFEST"
 
-./scripts/build-cf-deps-iso -c output/cf.tgz  -b output/bosh.tgz -m output/mysql.tgz
+./scripts/generate-cf-rabbit-manifest -r ../rabbitmq-on-demand-adapter-release -c ../cfdev-ci
 
-echo "BUILD EFI IMAGE"
+echo "GENERATE RABBITMQ TAR"
 
-./scripts/build-image
+./scripts/build-cf-rabbit-deps-tar -m output/rabbitmq.yml -s 3586.16
 
-echo "NOW, PLEASE GENERATE CF PLUGIN VIA: $PWD/src/code.cloudfoundry.org/cfdev/generate-plugin.sh"
+# echo "GENERATE CF ISO"
+
+# ./scripts/build-cf-deps-iso -c output/cf.tgz  -b output/bosh.tgz -m output/mysql.tgz
+
+# echo "BUILD EFI IMAGE"
+
+# ./scripts/build-image
+
+# echo "NOW, PLEASE GENERATE CF PLUGIN VIA: $PWD/src/code.cloudfoundry.org/cfdev/generate-plugin.sh"
