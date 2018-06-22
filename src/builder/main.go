@@ -159,7 +159,7 @@ func CompileRelease(stemcellVersion string, release map[interface{}]interface{},
 	if len(m) != 1 {
 		return fmt.Errorf("Could not find single file: %v", m)
 	}
-	return os.Rename(m[0], path)
+	return exec.Command("mv", m[0], path).Run()
 }
 
 func Releases(data Yaml, stemcellVersion string) error {
