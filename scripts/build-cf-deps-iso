@@ -2,7 +2,6 @@
 set -euxo pipefail
 
 cd "$(dirname "$0")/.."
-# TODO remove old files
 mkdir -p output/cache/{bin,releases}
 
 rq -y < ../cf-deployment/cf-deployment.yml | jq -r '.stemcells[0].version' > output/STEMCELL.txt
