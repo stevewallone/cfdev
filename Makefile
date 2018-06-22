@@ -4,17 +4,25 @@ cf_deployment = $(PWD)/../cf-deployment
 cf_ops = $(PWD)/images/cf/cf-operations
 
 .PHONY = all cf-deps
-all: cf-deps "$(output)"/STEMCELL.txt
+all: "$(output)"/cf-deps.iso "$(output)"/STEMCELL.txt
 cf-deps: "$(output)"/manifest.yml "$(output)"/runtime-config.yml "$(output)"/app-security-group.json "$(output)"/bin/deploy-cf "$(output)"/cloud-config.yml
 
-"$(output)"/runtime-config.yml:
-	cp "$(imgscf)"/configs/dns-runtime-config.yml "$(output)"/runtime-config.yml
-"$(output)"/app-security-group.json:
+"$(output)"/cf-deps.iso: cf-deps
+	echo $^ > $@
+
+"$(output)"/builder:
+	go build -o $@ src/builder/main.go
+
+"$(output)"/runtime-config.yml: "$(imgscf)"/configs/dns-runtime-config.yml "$(output)"/builder
+	cp "$(imgscf)"/configs/dns-runtime-config.yml $@
+	"$(output)"/builder $@
+"$(output)"/app-security-group.json: "$(imgscf)"/app-security-group.json "$(output)"/builder
 	cp "$(imgscf)"/app-security-group.json "$(output)"/app-security-group.json
+	"$(output)"/builder $@
 "$(output)"/bin/deploy-cf:
 	mkdir -p "$(output)"/bin
 	cp "$(imgscf)"/deploy-cf "$(output)"/bin/deploy-cf
-"$(output)"/manifest.yml: $(wildcard "$(cf_deployment)"/**/*.yml)
+"$(output)"/manifest.yml: $(wildcard "$(cf_deployment)"/**/*.yml) "$(output)"/builder
 	bosh int "$(cf_deployment)"/cf-deployment.yml \
 		-o "$(cf_deployment)"/operations/use-compiled-releases.yml \
 		\
@@ -36,10 +44,12 @@ cf-deps: "$(output)"/manifest.yml "$(output)"/runtime-config.yml "$(output)"/app
 		-v cf_admin_password=admin \
 		-v uaa_admin_client_secret=admin-client-secret \
 		> "$(output)/manifest.yml"
-"$(output)"/cloud-config.yml:
+	"$(output)"/builder $@
+"$(output)"/cloud-config.yml: "$(cf_deployment)"/iaas-support/bosh-lite/cloud-config.yml "$(cf_ops)"/set-cloud-config-subnet.yml "$(output)"/builder
 	bosh int "$(cf_deployment)"/iaas-support/bosh-lite/cloud-config.yml \
 		-o "$(cf_ops)"/set-cloud-config-subnet.yml \
 		> "$(output)"/cloud-config.yml
+	"$(output)"/builder $@
 
 "$(output)"/STEMCELL.txt:
 	rq -y < output/cache/manifest.yml | jq -r '.stemcells[0].version' > "$(output)"/STEMCELL.txt

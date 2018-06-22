@@ -5,13 +5,19 @@ cd "$(dirname "$0")/.."
 # TODO remove old files
 mkdir -p output/cache/{bin,releases}
 
+rq -y < ../cf-deployment/cf-deployment.yml | jq -r '.stemcells[0].version' > output/STEMCELL.txt
+
 echo "GENERATE MANIFESTS"
-./scripts/generate-bosh-manifest -b ../bosh-deployment/ 2> output/generate.log
-./scripts/generate-cf-manifest -c ../cf-deployment/ 2> output/generate.log
-./scripts/generate-cf-mysql-manifest -m ../cf-mysql-deployment/ 2> output/generate.log
+./scripts/generate-bosh-manifest -b ../bosh-deployment/ 2>> output/generate.log
+./scripts/generate-cf-manifest -c ../cf-deployment/ 2>> output/generate.log
+./scripts/generate-cf-mysql-manifest -m ../cf-mysql-deployment/ 2>> output/generate.log
+./scripts/build-workspace-tar 2>> output/generate.log >> output/generate.log
 
-## TODO "$script_dir"/../images/cf/build.sh (not sure why)
-## TODO generate workspace.tar (from build-cf-deps-iso)
+echo "MODIFY MANIFESTS"
+go run src/builder/main.go $(cat output/STEMCELL.txt) output/cache/*.yml
 
-go run src/builder/main.go '3586.16' output/cache/*.yml
+echo "DELETE OLD FILES"
+find output/cache/ -type f ! -newer output/STEMCELL.txt -delete
+
+echo "MAKE ISO FILE"
 mkisofs -quiet -V cf-deps -R -o output/cf-deps.iso output/cache/

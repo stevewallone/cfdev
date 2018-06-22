@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -62,7 +63,7 @@ func DownloadStemcell(version string) (string, error) {
 	newURL := fmt.Sprintf("file:///vcar/vcap/cache/%s", filepath.Base(path))
 	if Exists(path) {
 		fmt.Println("Skip Stemcell:", version)
-		return newURL, nil
+		return newURL, os.Chtimes(path, time.Now(), time.Now())
 	}
 	fmt.Println("Download Stemcell:", version)
 	err := Download(url, path)
@@ -169,6 +170,9 @@ func Releases(data Yaml, stemcellVersion string) error {
 				newURL := fmt.Sprintf("file:///var/vcap/cache/releases/%v-%v-%s.tgz", release["name"], release["version"], stemcellVersion)
 				if Exists(path) {
 					fmt.Println("Skip:", filepath.Base(path))
+					if err := os.Chtimes(path, time.Now(), time.Now()); err != nil {
+						return err
+					}
 					release["url"] = newURL
 				} else if release["stemcell"] != nil || strings.Contains(release["url"].(string), "-compiled-") {
 					fmt.Println("Download:", release["url"])
