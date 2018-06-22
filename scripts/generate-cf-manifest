@@ -44,7 +44,7 @@ pushd "$cf_deployment"
     \
     -v cf_admin_password=admin \
     -v uaa_admin_client_secret=admin-client-secret \
-    > "$output_dir/manifest.yml"
+    > "$output_dir/deployment.yml"
 
   bosh int iaas-support/bosh-lite/cloud-config.yml \
     -o "$ops_dir"/set-cloud-config-subnet.yml \
