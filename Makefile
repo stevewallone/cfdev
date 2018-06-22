@@ -1,13 +1,14 @@
 .PHONY: all
-all: cfdev # cf-deps.iso cfdev-efi.iso cfdev
+all: cfdev cf-deps.iso cfdev-efi.iso cfdev
 
 vpath %.iso output
+vpath cfdev src/code.cloudfoundry.org/cfdev
 
-cf-deps.iso: ./scripts/build-cf-deps-iso $(wildcard src/builder/**/*) $(wildcard ../bosh-deployment/**/*) $(wildcard ../cf-deployment/**/*) $(wildcard ../cf-mysql-deployment/**/*)
+cf-deps.iso: ./scripts/build-cf-deps-iso $(shell find src/builder ../bosh-deployment ../cf-deployment ../cf-mysql-deployment -type f)
 	./scripts/build-cf-deps-iso
 
 cfdev-efi.iso: ./scripts/build-image $(wildcard linuxkit/**/*)
 	./scripts/build-image
 
-cfdev: $(wildcard src/code.cloudfoundry.org/{cfdev,cfdevd}/**/*.go)
+cfdev: src/code.cloudfoundry.org/cfdev/generate-plugin.sh $(shell find src/code.cloudfoundry.org/{cfdev,cfdevd} -name '*.go')
 	(cd src/code.cloudfoundry.org/cfdev && ./generate-plugin.sh)
