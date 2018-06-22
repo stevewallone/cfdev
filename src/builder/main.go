@@ -60,7 +60,7 @@ func Download(url, path string) error {
 func DownloadStemcell(version string) (string, error) {
 	url := fmt.Sprintf("https://s3.amazonaws.com/bosh-core-stemcells/warden/bosh-stemcell-%s-warden-boshlite-ubuntu-trusty-go_agent.tgz", version)
 	path := filepath.Join("output/cache", fmt.Sprintf("bosh-stemcell-%s-warden-boshlite-ubuntu-trusty-go_agent.tgz", version))
-	newURL := fmt.Sprintf("file:///vcar/vcap/cache/%s", filepath.Base(path))
+	newURL := fmt.Sprintf("file:///var/vcap/cache/%s", filepath.Base(path))
 	if Exists(path) {
 		fmt.Println("Skip Stemcell:", version)
 		return newURL, os.Chtimes(path, time.Now(), time.Now())
