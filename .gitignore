@@ -36,3 +36,7 @@
 
 /src/code.cloudfoundry.org/cfdev/cfdev
 /src/code.cloudfoundry.org/cfdev/cfdevd
+
+.snb
+cfdev
+cfdevd
