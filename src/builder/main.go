@@ -224,21 +224,23 @@ func Releases(data Yaml, stemcellVersion string) error {
 						return err
 					}
 					release["url"] = newURL
-				} else if url, ok := release["url"].(string); ok && strings.HasPrefix(url, "file://release") {
-					release["url"] = "file:///var/vcap" + (release["url"].(string))[6:]
-					fmt.Println("Convert Absolute:", release["url"])
-				} else if release["stemcell"] != nil || (release["url"] != nil && strings.Contains(release["url"].(string), "-compiled-")) {
-					fmt.Println("Download:", release["url"])
-					if err := Download(release["url"].(string), path); err != nil {
-						return fmt.Errorf("download: %s: %s", release["url"], err)
+				} else if url, ok := release["url"].(string); ok && url != "<nil>" {
+					if strings.HasPrefix(url, "file://release") {
+						release["url"] = "file:///var/vcap" + (release["url"].(string))[6:]
+						fmt.Println("Convert Absolute:", release["url"])
+					} else if release["stemcell"] != nil || strings.Contains(url, "-compiled-") {
+						fmt.Println("Download:", url)
+						if err := Download(url, path); err != nil {
+							return fmt.Errorf("download: %s: %s", url, err)
+						}
+						release["url"] = newURL
+					} else {
+						fmt.Println("Compile:", url)
+						if err := CompileRelease(stemcellVersion, release, path); err != nil {
+							return fmt.Errorf("compile release: %s: %s", url, err)
+						}
+						release["url"] = newURL
 					}
-					release["url"] = newURL
-				} else {
-					fmt.Println("Compile:", release["url"])
-					if err := CompileRelease(stemcellVersion, release, path); err != nil {
-						return fmt.Errorf("compile release: %s: %s", release["url"], err)
-					}
-					release["url"] = newURL
 				}
 			}
 		}
