@@ -95,8 +95,8 @@ func Stemcells(data Yaml) (string, error) {
 	if stemcells, ok := data["stemcells"].([]interface{}); ok {
 		for _, stemcell := range stemcells {
 			if stemcell, ok := stemcell.(Yaml); ok {
-				if stemcell["os"] == "ubuntu-trusty" {
-					stemcellVersion = stemcell["version"].(string)
+				stemcellVersion = fmt.Sprintf("%v", stemcell["version"])
+				if stemcell["os"] == "ubuntu-trusty" && stemcellVersion != "<nil>" {
 					if _, err := DownloadStemcell(stemcellVersion); err != nil {
 						return "", err
 					}
