@@ -196,6 +196,23 @@ func Releases(data Yaml, stemcellVersion string) error {
 	return nil
 }
 
+func OneInstance(data Yaml) {
+	if groups, ok := data["instance_groups"].([]interface{}); ok {
+		for _, group := range groups {
+			if group, ok := group.(Yaml); ok {
+				if i, ok := group["instances"].(int); ok {
+					if i > 1 {
+						group["instances"] = 1
+						fmt.Printf("Instances: %s: %d -> 1\n", group["name"], i)
+					} else {
+						fmt.Printf("Instances: %s: %d\n", group["name"], i)
+					}
+				}
+			}
+		}
+	}
+}
+
 func Write(data interface{}, path string) error {
 	b, err := yaml.Marshal(data)
 	if err != nil {
@@ -214,12 +231,13 @@ func Process(stemcellVersion, file string) error {
 		return fmt.Errorf("stemcells: %s: %s", file, err)
 	}
 	if foundStemcellVersion != "" && foundStemcellVersion != stemcellVersion {
-		// TODO have a better plan
-		return fmt.Errorf("expected stemcell %s, found %s", stemcellVersion, foundStemcellVersion)
+		fmt.Printf("===\n=== expected stemcell %s, found %s (using found version)\n===\n", stemcellVersion, foundStemcellVersion)
+		stemcellVersion = foundStemcellVersion
 	}
 	if err := Releases(data, stemcellVersion); err != nil {
 		return fmt.Errorf("releases: %s: %s", file, err)
 	}
+	OneInstance(data)
 	if err := Write(data, file); err != nil {
 		return fmt.Errorf("write: %s: %s", file, err)
 	}
