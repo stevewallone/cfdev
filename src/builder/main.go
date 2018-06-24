@@ -174,6 +174,9 @@ func Releases(data Yaml, stemcellVersion string) error {
 						return err
 					}
 					release["url"] = newURL
+				} else if strings.HasPrefix(release["url"].(string), "file://release") {
+					release["url"] = "file:///var/vcap" + (release["url"].(string))[6:]
+					fmt.Println("Convert Absolute:", release["url"])
 				} else if release["stemcell"] != nil || strings.Contains(release["url"].(string), "-compiled-") {
 					fmt.Println("Download:", release["url"])
 					if err := Download(release["url"].(string), path); err != nil {
