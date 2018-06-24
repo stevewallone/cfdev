@@ -48,7 +48,8 @@ stemcell_ops="---
 - type: replace
   path: /resource_pools/name=vms/stemcell
   value:
-    url: file:///var/vcap/releases/bosh-stemcell-${stemcell_version}-warden-boshlite-ubuntu-trusty-go_agent.tgz
+    url: https://s3.amazonaws.com/bosh-gce-light-stemcells/light-bosh-stemcell-${stemcell_version}-google-kvm-ubuntu-trusty-go_agent.tgz
+    version: $stemcell_version
 "
 
 pushd "$bosh_deployment"
