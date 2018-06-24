@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -104,6 +105,55 @@ func Stemcells(data Yaml) (string, error) {
 		}
 	}
 	return stemcellVersion, nil
+}
+
+func isStemcellUploaded(stemcellVersion string) (bool, error) {
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command("bosh", "stemcells", "--json")
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", stderr.String())
+		return false, err
+	}
+	data := struct {
+		Tables []struct {
+			Rows []struct {
+				Version string `json:"version"`
+			}
+		}
+	}{}
+	if err := json.Unmarshal(stdout.Bytes(), &data); err != nil {
+		return false, err
+	}
+	for _, table := range data.Tables {
+		for _, row := range table.Rows {
+			if row.Version == stemcellVersion || row.Version == fmt.Sprintf("%s*", stemcellVersion) {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+func UploadStemcell(stemcellVersion string) error {
+	if uploaded, err := isStemcellUploaded(stemcellVersion); err != nil {
+		return err
+	} else if uploaded {
+		return nil
+	}
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command(
+		"bosh", "upload-stemcell",
+		fmt.Sprintf("https://s3.amazonaws.com/bosh-gce-light-stemcells/light-bosh-stemcell-%s-google-kvm-ubuntu-trusty-go_agent.tgz", stemcellVersion),
+	)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", stderr.String())
+		return err
+	}
+	return nil
 }
 
 func CompileRelease(stemcellVersion string, release map[interface{}]interface{}, path string) error {
@@ -233,6 +283,9 @@ func Process(stemcellVersion, file string) error {
 	if foundStemcellVersion != "" && foundStemcellVersion != stemcellVersion {
 		fmt.Printf("===\n=== expected stemcell %s, found %s (using found version)\n===\n", stemcellVersion, foundStemcellVersion)
 		stemcellVersion = foundStemcellVersion
+	}
+	if err := UploadStemcell(stemcellVersion); err != nil {
+		return fmt.Errorf("upload stemcell: %s: %s", file, err)
 	}
 	if err := Releases(data, stemcellVersion); err != nil {
 		return fmt.Errorf("releases: %s: %s", file, err)
