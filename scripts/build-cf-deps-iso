@@ -16,6 +16,16 @@ echo "GENERATE MANIFESTS"
 echo "MODIFY MANIFESTS"
 go run src/builder/main.go $(cat output/STEMCELL.txt) output/cache/*.yml
 
+## Write metadata.yml
+cat > "$OUTPUT"/cache/metadata.yml <<EOF
+---
+services:
+- name: Mysql
+  handle: deploy-mysql
+  script: bin/deploy-mysql
+  deployment: cf-mysql
+EOF
+
 echo "DELETE OLD FILES"
 find output/cache/ -type f ! -newer output/STEMCELL.txt -delete
 
