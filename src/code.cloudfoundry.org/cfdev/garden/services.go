@@ -1,7 +1,9 @@
 package garden
 
 import (
+	"archive/tar"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"path/filepath"
 
@@ -58,15 +60,30 @@ func GetServices(client garden.Client) ([]Service, error) {
 		return nil, err
 	}
 	defer r.Close()
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
+	tr := tar.NewReader(r)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break // End of archive
+		}
+		if err != nil {
+			return nil, err
+		}
+		fmt.Printf("Contents of %s:\n", hdr.Name)
+		b, err := ioutil.ReadAll(tr)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println(string(b))
+		fmt.Println()
+
+		services := struct {
+			Services []Service `yaml:"services"`
+		}{}
+		err = yaml.Unmarshal(b, &services)
+		return services.Services, err
 	}
-	services := struct {
-		Services []Service `yaml:"services"`
-	}{}
-	err = yaml.Unmarshal(b, services)
-	return services.Services, err
+	return nil, fmt.Errorf("metadata.yml not found in container")
 }
 
 func containerSpec(handle string) garden.ContainerSpec {
