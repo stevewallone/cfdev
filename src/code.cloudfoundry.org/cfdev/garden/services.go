@@ -48,12 +48,12 @@ type Service struct {
 	Deployment string `yaml:"deployment"`
 }
 
-func GetServices(client garden.Client, handle, script string) ([]Service, error) {
-	container, err := client.Create(containerSpec(handle))
+func GetServices(client garden.Client) ([]Service, error) {
+	container, err := client.Create(containerSpec("get-services"))
 	if err != nil {
 		return nil, err
 	}
-	r, err := container.StreamOut(garden.StreamOutSpec{Path: ""})
+	r, err := container.StreamOut(garden.StreamOutSpec{Path: "/var/vcap/cache/metadata.yml"})
 	if err != nil {
 		return nil, err
 	}
