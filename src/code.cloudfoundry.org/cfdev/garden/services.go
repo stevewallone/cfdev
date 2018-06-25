@@ -1,4 +1,4 @@
-package garrden
+package garden
 
 import (
 	"fmt"
@@ -51,19 +51,22 @@ type Service struct {
 func GetServices(client garden.Client, handle, script string) ([]Service, error) {
 	container, err := client.Create(containerSpec(handle))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	r, err := container.StreamOut(container.StreamOutSpec{})
+	r, err := container.StreamOut(garden.StreamOutSpec{Path: ""})
 	if err != nil {
-		return err
+		return nil, err
 	}
+	defer r.Close()
 	b, err := ioutil.ReadAll(r)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	services := make([]Service, 0)
+	services := struct {
+		Services []Service `yaml:"services"`
+	}{}
 	err = yaml.Unmarshal(b, services)
-	return services, err
+	return services.Services, err
 }
 
 func containerSpec(handle string) garden.ContainerSpec {
