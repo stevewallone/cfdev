@@ -16,26 +16,32 @@ import (
 	cfdevdClient "code.cloudfoundry.org/cfdevd/client"
 	launchdModels "code.cloudfoundry.org/cfdevd/launchd/models"
 	"github.com/spf13/cobra"
+	"code.cloudfoundry.org/cfdev/network"
+	"path/filepath"
 )
 
 type UI interface {
 	Say(message string, args ...interface{})
 	Writer() io.Writer
 }
+
 type Launchd interface {
-	AddDaemon(launchdModels.DaemonSpec) error
+	AddDaemon(launchdlaunchd.DaemonSpec) error
 	RemoveDaemon(label string) error
 	Start(label string) error
 	Stop(label string) error
 	IsRunning(label string) (bool, error)
 }
+
 type cmdBuilder interface {
 	Cmd() *cobra.Command
 }
+
 type AnalyticsClient interface {
 	Event(event string, data ...map[string]interface{}) error
 	PromptOptIn() error
 }
+
 type Toggle interface {
 	Get() bool
 	Set(value bool) error
@@ -86,6 +92,8 @@ func NewRoot(exit chan struct{}, ui UI, config config.Config, launchd Launchd, a
 			ProcManager:     &process.Manager{},
 			Analytics:       analyticsClient,
 			AnalyticsToggle: analyticsToggle,
+			HostNet:         &network.HostNet{},
+			CFDevD:          process.CFDevD{ExecutablePath: filepath.Join(config.CacheDir, "cfdevd")},
 		},
 		&b6.Stop{
 			Config:       config,

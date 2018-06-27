@@ -19,9 +19,9 @@ import (
 var _ = Describe("VpnKit", func() {
 	var (
 		lctl           *launchd.Launchd
-		cfg            config.Config
 		tmpDir         string
 		vpnkitStateDir string
+		vkit           vpnkit.Vpnkit
 	)
 
 	BeforeEach(func() {
@@ -37,15 +37,18 @@ var _ = Describe("VpnKit", func() {
 		Expect(os.Mkdir(stateDir, 0777)).To(Succeed())
 		Expect(os.Mkdir(homeDir, 0777)).To(Succeed())
 		downloadVpnKit(cacheDir, "https://s3.amazonaws.com/cfdev-ci/vpnkit/vpnkit-darwin-amd64-0.0.0-build.3")
-
-		cfg = config.Config{
-			CacheDir:       cacheDir,
-			VpnkitStateDir: vpnkitStateDir,
-			StateDir:       stateDir,
-			CFDevHome:      homeDir,
-		}
 		lctl = &launchd.Launchd{
 			PListDir: tmpDir,
+		}
+
+		vkit = vpnkit.Vpnkit{
+			Config: config.Config{
+				CacheDir:       cacheDir,
+				VpnkitStateDir: vpnkitStateDir,
+				StateDir:       stateDir,
+				CFDevHome:      homeDir,
+			},
+			Launchd: lctl,
 		}
 	})
 
@@ -55,7 +58,7 @@ var _ = Describe("VpnKit", func() {
 	})
 
 	It("starts vpnkit", func() {
-		Expect(vpnkit.Start(cfg, lctl)).To(Succeed())
+		Expect(vkit.Start()).To(Succeed())
 		conn, err := net.Dial("unix", filepath.Join(vpnkitStateDir, "vpnkit_eth.sock"))
 		defer conn.Close()
 		Expect(err).NotTo(HaveOccurred())

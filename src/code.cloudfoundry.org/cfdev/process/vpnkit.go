@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/cfdev/config"
 	"code.cloudfoundry.org/cfdev/env"
 	"code.cloudfoundry.org/cfdev/errors"
-	launchd "code.cloudfoundry.org/cfdevd/launchd/models"
+	"code.cloudfoundry.org/cfdevd/launchd"
 )
 
 type VpnKit struct {

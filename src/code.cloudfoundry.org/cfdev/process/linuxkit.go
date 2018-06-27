@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/cfdev/config"
-	launchd "code.cloudfoundry.org/cfdevd/launchd/models"
+	"code.cloudfoundry.org/cfdevd/launchd"
 )
 
 type UI interface {
@@ -20,11 +20,28 @@ type UI interface {
 type LinuxKit struct {
 	Config      config.Config
 	DepsIsoPath string
+	Launchd     Launchd
+}
+
+type Launchd interface {
+	AddDaemon(launchd.DaemonSpec) error
+	Start(label string) error
 }
 
 const LinuxKitLabel = "org.cloudfoundry.cfdev.linuxkit"
 
-func (l *LinuxKit) DaemonSpec(cpus, mem int) (launchd.DaemonSpec, error) {
+func (l *LinuxKit) Start(cpus int, mem int) error {
+	daemonSpec, err := l.daemonSpec(cpus, mem)
+	if err != nil {
+		return err
+	}
+	if err := l.Launchd.AddDaemon(daemonSpec); err != nil {
+		return err
+	}
+	return l.Launchd.Start(LinuxKitLabel)
+}
+
+func (l *LinuxKit) daemonSpec(cpus, mem int) (launchd.DaemonSpec, error) {
 	linuxkit := filepath.Join(l.Config.CacheDir, "linuxkit")
 	hyperkit := filepath.Join(l.Config.CacheDir, "hyperkit")
 	uefi := filepath.Join(l.Config.CacheDir, "UEFI.fd")

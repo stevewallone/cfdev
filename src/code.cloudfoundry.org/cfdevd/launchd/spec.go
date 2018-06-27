@@ -1,4 +1,4 @@
-package models
+package launchd
 
 type DaemonSpec struct {
 	Label            string
