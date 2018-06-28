@@ -17,15 +17,17 @@ var _ = Describe("Fetching BOSH Configuration", func() {
 		fakeClient *gardenfakes.FakeClient
 		boshConfig gdn.BOSHConfiguration
 		err        error
+		gclient    *gdn.Garden
 	)
 
 	BeforeEach(func() {
 		fakeClient = new(gardenfakes.FakeClient)
 		fakeClient.CreateReturns(nil, errors.New("some error"))
+		gclient = &gdn.Garden{Client: fakeClient}
 	})
 
 	JustBeforeEach(func() {
-		boshConfig, err = gdn.FetchBOSHConfig(fakeClient)
+		boshConfig, err = gclient.FetchBOSHConfig()
 	})
 
 	It("creates a container", func() {

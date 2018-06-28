@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	launchd "code.cloudfoundry.org/cfdevd/launchd"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -33,18 +32,6 @@ func (m *MockLaunchd) EXPECT() *MockLaunchdMockRecorder {
 	return m.recorder
 }
 
-// AddDaemon mocks base method
-func (m *MockLaunchd) AddDaemon(arg0 launchd.DaemonSpec) error {
-	ret := m.ctrl.Call(m, "AddDaemon", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AddDaemon indicates an expected call of AddDaemon
-func (mr *MockLaunchdMockRecorder) AddDaemon(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDaemon", reflect.TypeOf((*MockLaunchd)(nil).AddDaemon), arg0)
-}
-
 // IsRunning mocks base method
 func (m *MockLaunchd) IsRunning(arg0 string) (bool, error) {
 	ret := m.ctrl.Call(m, "IsRunning", arg0)
@@ -56,30 +43,6 @@ func (m *MockLaunchd) IsRunning(arg0 string) (bool, error) {
 // IsRunning indicates an expected call of IsRunning
 func (mr *MockLaunchdMockRecorder) IsRunning(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockLaunchd)(nil).IsRunning), arg0)
-}
-
-// RemoveDaemon mocks base method
-func (m *MockLaunchd) RemoveDaemon(arg0 string) error {
-	ret := m.ctrl.Call(m, "RemoveDaemon", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RemoveDaemon indicates an expected call of RemoveDaemon
-func (mr *MockLaunchdMockRecorder) RemoveDaemon(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveDaemon", reflect.TypeOf((*MockLaunchd)(nil).RemoveDaemon), arg0)
-}
-
-// Start mocks base method
-func (m *MockLaunchd) Start(arg0 string) error {
-	ret := m.ctrl.Call(m, "Start", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Start indicates an expected call of Start
-func (mr *MockLaunchdMockRecorder) Start(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockLaunchd)(nil).Start), arg0)
 }
 
 // Stop mocks base method

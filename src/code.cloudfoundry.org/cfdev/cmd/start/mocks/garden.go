@@ -45,16 +45,16 @@ func (mr *MockGardenClientMockRecorder) DeployBosh() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployBosh", reflect.TypeOf((*MockGardenClient)(nil).DeployBosh))
 }
 
-// DeployCloudfoundry mocks base method
-func (m *MockGardenClient) DeployCloudfoundry(arg0 []string) error {
-	ret := m.ctrl.Call(m, "DeployCloudfoundry", arg0)
+// DeployCloudFoundry mocks base method
+func (m *MockGardenClient) DeployCloudFoundry(arg0 []string) error {
+	ret := m.ctrl.Call(m, "DeployCloudFoundry", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// DeployCloudfoundry indicates an expected call of DeployCloudfoundry
-func (mr *MockGardenClientMockRecorder) DeployCloudfoundry(arg0 interface{}) *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployCloudfoundry", reflect.TypeOf((*MockGardenClient)(nil).DeployCloudfoundry), arg0)
+// DeployCloudFoundry indicates an expected call of DeployCloudFoundry
+func (mr *MockGardenClientMockRecorder) DeployCloudFoundry(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployCloudFoundry", reflect.TypeOf((*MockGardenClient)(nil).DeployCloudFoundry), arg0)
 }
 
 // DeployService mocks base method

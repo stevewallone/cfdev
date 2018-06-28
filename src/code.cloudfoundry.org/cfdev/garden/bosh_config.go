@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func FetchBOSHConfig(client garden.Client) (BOSHConfiguration, error) {
+func (g *Garden) FetchBOSHConfig() (BOSHConfiguration, error) {
 	containerSpec := garden.ContainerSpec{
 		Handle:     "fetch-bosh-config",
 		Privileged: true,
@@ -26,7 +26,7 @@ func FetchBOSHConfig(client garden.Client) (BOSHConfiguration, error) {
 		},
 	}
 
-	container, err := client.Create(containerSpec)
+	container, err := g.Client.Create(containerSpec)
 	if err != nil {
 		return BOSHConfiguration{}, err
 	}
@@ -54,7 +54,7 @@ func FetchBOSHConfig(client garden.Client) (BOSHConfiguration, error) {
 		return BOSHConfiguration{}, errors.SafeWrap(nil, fmt.Sprintf("process exited with status %v", exitCode))
 	}
 
-	client.Destroy("fetch-bosh-config")
+	g.Client.Destroy("fetch-bosh-config")
 
 	var resp yamlResponse
 	if err := yaml.Unmarshal(buffer.Bytes(), &resp); err != nil {

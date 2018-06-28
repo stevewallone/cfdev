@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/cfdev/config"
 	"code.cloudfoundry.org/cfdevd/launchd"
@@ -26,12 +27,14 @@ type LinuxKit struct {
 type Launchd interface {
 	AddDaemon(launchd.DaemonSpec) error
 	Start(label string) error
+	Stop(label string) error
+	IsRunning(label string) (bool, error)
 }
 
 const LinuxKitLabel = "org.cloudfoundry.cfdev.linuxkit"
 
 func (l *LinuxKit) Start(cpus int, mem int) error {
-	daemonSpec, err := l.daemonSpec(cpus, mem)
+	daemonSpec, err := l.DaemonSpec(cpus, mem)
 	if err != nil {
 		return err
 	}
@@ -41,7 +44,11 @@ func (l *LinuxKit) Start(cpus int, mem int) error {
 	return l.Launchd.Start(LinuxKitLabel)
 }
 
-func (l *LinuxKit) daemonSpec(cpus, mem int) (launchd.DaemonSpec, error) {
+func (l *LinuxKit) Stop() {
+	l.Launchd.Stop(LinuxKitLabel)
+}
+
+func (l *LinuxKit) DaemonSpec(cpus, mem int) (launchd.DaemonSpec, error) {
 	linuxkit := filepath.Join(l.Config.CacheDir, "linuxkit")
 	hyperkit := filepath.Join(l.Config.CacheDir, "hyperkit")
 	uefi := filepath.Join(l.Config.CacheDir, "UEFI.fd")
@@ -92,4 +99,17 @@ func (l *LinuxKit) daemonSpec(cpus, mem int) (launchd.DaemonSpec, error) {
 		StdoutPath: path.Join(l.Config.CFDevHome, "linuxkit.stdout.log"),
 		StderrPath: path.Join(l.Config.CFDevHome, "linuxkit.stderr.log"),
 	}, nil
+}
+
+func (l *LinuxKit) Watch(exit chan string) {
+	go func() {
+		for {
+			running, err := l.Launchd.IsRunning(VpnKitLabel)
+			if !running && err == nil {
+				exit <- "linuxkit"
+				return
+			}
+			time.Sleep(5 * time.Second)
+		}
+	}()
 }

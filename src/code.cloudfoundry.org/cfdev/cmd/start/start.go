@@ -8,16 +8,16 @@ import (
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/cfdev/config"
-	"code.cloudfoundry.org/cfdev/errors"
-	"github.com/spf13/cobra"
-	"code.cloudfoundry.org/cfdev/process"
 	"path/filepath"
+
 	"code.cloudfoundry.org/cfdev/cfanalytics"
+	"code.cloudfoundry.org/cfdev/config"
 	"code.cloudfoundry.org/cfdev/env"
-	"code.cloudfoundry.org/cfdev/resource"
-	"code.cloudfoundry.org/cfdevd/launchd"
+	"code.cloudfoundry.org/cfdev/errors"
 	"code.cloudfoundry.org/cfdev/garden"
+	"code.cloudfoundry.org/cfdev/process"
+	"code.cloudfoundry.org/cfdev/resource"
+	"github.com/spf13/cobra"
 )
 
 //go:generate mockgen -package mocks -destination mocks/ui.go code.cloudfoundry.org/cfdev/cmd/start UI
@@ -28,10 +28,6 @@ type UI interface {
 
 //go:generate mockgen -package mocks -destination mocks/launchd.go code.cloudfoundry.org/cfdev/cmd/start Launchd
 type Launchd interface {
-	AddDaemon(launchd.DaemonSpec) error
-	RemoveDaemon(label string) error
-	Start(label string) error
-	Stop(label string) error
 	IsRunning(label string) (bool, error)
 }
 
@@ -70,18 +66,22 @@ type CFDevD interface {
 //go:generate mockgen -package mocks -destination mocks/vpnkit.go code.cloudfoundry.org/cfdev/cmd/start Vpnkit
 type Vpnkit interface {
 	Start() error
+	Stop()
+	Watch(chan string)
 }
 
 //go:generate mockgen -package mocks -destination mocks/linuxkit.go code.cloudfoundry.org/cfdev/cmd/start Linuxkit
 type Linuxkit interface {
 	Start(int, int) error
+	Stop()
+	Watch(chan string)
 }
 
 //go:generate mockgen -package mocks -destination mocks/garden.go code.cloudfoundry.org/cfdev/cmd/start GardenClient
 type GardenClient interface {
 	Ping() error
 	DeployBosh() error
-	DeployCloudfoundry([]string) error
+	DeployCloudFoundry([]string) error
 	DeployService(string, string) error
 	GetServices() ([]garden.Service, error)
 }
@@ -95,7 +95,7 @@ type Args struct {
 
 type Start struct {
 	Exit            chan struct{}
-	LocalExit       chan struct{}
+	LocalExit       chan string
 	UI              UI
 	Config          config.Config
 	Launchd         Launchd
@@ -136,11 +136,11 @@ func (s *Start) Execute(args Args) error {
 		select {
 		case <-s.Exit:
 			// no-op
-		case <-s.LocalExit:
-			// no-op
+		case name := <-s.LocalExit:
+			s.UI.Say("ERROR: %s has stopped", name)
 		}
-		s.Launchd.Stop(process.LinuxKitLabel)
-		s.Launchd.Stop(process.VpnKitLabel)
+		s.Linuxkit.Stop()
+		s.Vpnkit.Stop()
 		s.ProcManager.SafeKill(filepath.Join(s.Config.StateDir, "hyperkit.pid"), "hyperkit")
 		os.Exit(128)
 	}()
@@ -173,15 +173,14 @@ func (s *Start) Execute(args Args) error {
 		return errors.SafeWrap(err, "cleaning state directory")
 	}
 
-	if err := s.setupNetworking(); err != nil {
-		return errors.SafeWrap(err, "setting up network")
+	if err := s.HostNet.AddLoopbackAliases(s.Config.BoshDirectorIP, s.Config.CFRouterIP); err != nil {
+		return errors.SafeWrap(err, "adding aliases")
 	}
-	//
-	//	registries, err := s.parseDockerRegistriesFlag(args.Registries)
-	//	if err != nil {
-	//		return errors.SafeWrap(err, "Unable to parse docker registries")
-	//	}
-	//
+
+	// registries, err := s.parseDockerRegistriesFlag(args.Registries)
+	// if err != nil {
+	// 	return errors.SafeWrap(err, "Unable to parse docker registries")
+	// }
 
 	s.UI.Say("Downloading Resources...")
 	if err := s.Cache.Sync(s.Config.Dependencies); err != nil {
@@ -197,60 +196,60 @@ func (s *Start) Execute(args Args) error {
 	if err := s.Vpnkit.Start(); err != nil {
 		return errors.SafeWrap(err, "starting vpnkit")
 	}
-	//s.watchLaunchd(process.VpnKitLabel)
+	s.Vpnkit.Watch(s.LocalExit)
 
 	s.UI.Say("Starting the VM...")
 	if err := s.Linuxkit.Start(args.Cpus, args.Mem); err != nil {
 		return errors.SafeWrap(err, "starting linuxkit")
 	}
-	//s.watchLaunchd(process.LinuxKitLabel)
-	//
-	//	s.UI.Say("Waiting for Garden...")
-	//	garden := client.New(connection.New("tcp", "localhost:8888"))
-	//	waitForGarden(garden)
-	//
-	//	s.UI.Say("Deploying the BOSH Director...")
-	//	if err := gdn.DeployBosh(garden); err != nil {
-	//		return errors.SafeWrap(err, "Failed to deploy the BOSH Director")
-	//	}
-	//
-	//	s.UI.Say("Deploying CF...")
-	//	go reportDeployProgress(s.UI, garden, "cf")
-	//	if err := gdn.DeployCloudFoundry(garden, registries); err != nil {
-	//		return errors.SafeWrap(err, "Failed to deploy the Cloud Foundry")
-	//	}
-	//
-	//	services, err := gdn.GetServices(garden)
-	//	if err != nil {
-	//		return errors.SafeWrap(err, "Failed to get list of services to deploy")
-	//	}
-	//	for _, service := range services {
-	//		s.UI.Say("Deploying %s...", service.Name)
-	//		go reportDeployProgress(s.UI, garden, service.Deployment)
-	//		if err := gdn.DeployService(garden, service.Handle, service.Script); err != nil {
-	//			return errors.SafeWrap(err, fmt.Sprintf("Failed to deploy %s", service.Name))
-	//		}
-	//	}
-	//
-	//	s.UI.Say(`
-	//
-	//  ██████╗███████╗██████╗ ███████╗██╗   ██╗
-	// ██╔════╝██╔════╝██╔══██╗██╔════╝██║   ██║
-	// ██║     █████╗  ██║  ██║█████╗  ██║   ██║
-	// ██║     ██╔══╝  ██║  ██║██╔══╝  ╚██╗ ██╔╝
-	// ╚██████╗██║     ██████╔╝███████╗ ╚████╔╝
-	//  ╚═════╝╚═╝     ╚═════╝ ╚══════╝  ╚═══╝
-	//             is now running!
-	//
-	//To begin using CF Dev, please run:
-	//    cf login -a https://api.v3.pcfdev.io --skip-ssl-validation
-	//
-	//Admin user => Email: admin / Password: admin
-	//Regular user => Email: user / Password: pass
-	//`)
-	//
-	//	s.Analytics.Event(cfanalytics.START_END)
-	//
+	s.Linuxkit.Watch(s.LocalExit)
+
+	s.UI.Say("Waiting for Garden...")
+	s.waitForGarden()
+
+	s.UI.Say("Deploying the BOSH Director...")
+	if err := s.GardenClient.DeployBosh(); err != nil {
+		return errors.SafeWrap(err, "Failed to deploy the BOSH Director")
+	}
+
+	s.UI.Say("Deploying CF...")
+	// TODO test the progress reporter
+	// go reportDeployProgress(s.UI, garden, "cf")
+	if err := s.GardenClient.DeployCloudFoundry([]string{}); err != nil {
+		return errors.SafeWrap(err, "Failed to deploy the Cloud Foundry")
+	}
+
+	services, err := s.GardenClient.GetServices()
+	if err != nil {
+		return errors.SafeWrap(err, "Failed to get list of services to deploy")
+	}
+	for _, service := range services {
+		s.UI.Say("Deploying %s...", service.Name)
+		// go reportDeployProgress(s.UI, garden, service.Deployment)
+		if err := s.GardenClient.DeployService(service.Handle, service.Script); err != nil {
+			return errors.SafeWrap(err, fmt.Sprintf("Failed to deploy %s", service.Name))
+		}
+	}
+
+	s.UI.Say(`
+
+	  ██████╗███████╗██████╗ ███████╗██╗   ██╗
+	 ██╔════╝██╔════╝██╔══██╗██╔════╝██║   ██║
+	 ██║     █████╗  ██║  ██║█████╗  ██║   ██║
+	 ██║     ██╔══╝  ██║  ██║██╔══╝  ╚██╗ ██╔╝
+	 ╚██████╗██║     ██████╔╝███████╗ ╚████╔╝
+	  ╚═════╝╚═╝     ╚═════╝ ╚══════╝  ╚═══╝
+	             is now running!
+
+	To begin using CF Dev, please run:
+	    cf login -a https://api.v3.pcfdev.io --skip-ssl-validation
+
+	Admin user => Email: admin / Password: admin
+	Regular user => Email: user / Password: pass
+	`)
+
+	s.Analytics.Event(cfanalytics.START_END)
+
 	return nil
 }
 
@@ -259,7 +258,6 @@ func (s *Start) waitForGarden() {
 		if err := s.GardenClient.Ping(); err == nil {
 			return
 		}
-
 		time.Sleep(time.Second)
 	}
 }
@@ -272,16 +270,6 @@ func cleanupStateDir(cfg config.Config) error {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return errors.SafeWrap(err, "Unable to create .cfdev state directory")
 		}
-	}
-
-	return nil
-}
-
-func (s *Start) setupNetworking() error {
-	err := s.HostNet.AddLoopbackAliases(s.Config.BoshDirectorIP, s.Config.CFRouterIP)
-
-	if err != nil {
-		return errors.SafeWrap(err, "Unable to alias BOSH Director/CF Router IP")
 	}
 
 	return nil
@@ -312,33 +300,21 @@ func (s *Start) parseDockerRegistriesFlag(flag string) ([]string, error) {
 	return registries, nil
 }
 
-func (s *Start) watchLaunchd(label string) {
-	go func() {
-		for {
-			running, err := s.Launchd.IsRunning(label)
-			if !running && err == nil {
-				s.UI.Say("ERROR: %s has stopped", label)
-				s.LocalExit <- struct{}{}
-				return
-			}
-			time.Sleep(5 * time.Second)
-		}
-	}()
-}
-
-func (s *Start) reportDeployProgress(UI UI, deploymentName string) {
-	//start := time.Now()
-	//s.UI.Say("  Uploading Releases")
-	//b, err := bosh.New(s.GardenClient)
-	//if err == nil {
-	//	ch := b.VMProgress(deploymentName)
-	//	for p := range ch {
-	//		if p.Total > 0 {
-	//			s.UI.Say("  Progress: %d of %d (%s)", p.Done, p.Total, p.Duration.Round(time.Second))
-	//		} else {
-	//			s.UI.Say("  Uploaded Releases: %d (%s)", p.Releases, p.Duration.Round(time.Second))
-	//		}
-	//	}
-	//	s.UI.Say("  Done (%s)", time.Now().Sub(start).Round(time.Second))
-	//}
-}
+// func (s *Start) reportDeployProgress(UI UI, garden client.Client, deploymentName string) {
+// start := time.Now()
+// ui := singlelinewriter.New(UI.Writer())
+// ui.Say("  Uploading Releases")
+// b, err := bosh.New(garden)
+// if err == nil {
+// 	ch := b.VMProgress(deploymentName)
+// 	for p := range ch {
+// 		if p.Total > 0 {
+// 			ui.Say("  Progress: %d of %d (%s)", p.Done, p.Total, p.Duration.Round(time.Second))
+// 		} else {
+// 			ui.Say("  Uploaded Releases: %d (%s)", p.Releases, p.Duration.Round(time.Second))
+// 		}
+// 	}
+// 	ui.Close()
+// 	UI.Say("  Done (%s)", time.Now().Sub(start).Round(time.Second))
+// }
+// }

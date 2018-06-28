@@ -4,16 +4,18 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"code.cloudfoundry.org/cfdev/cmd/start/mocks"
-	"github.com/golang/mock/gomock"
-	"code.cloudfoundry.org/cfdev/cmd/start"
-	"code.cloudfoundry.org/cfdev/config"
 	"io/ioutil"
-	"path/filepath"
 	"os"
+	"path/filepath"
+
 	"code.cloudfoundry.org/cfdev/cfanalytics"
+	"code.cloudfoundry.org/cfdev/cmd/start"
+	"code.cloudfoundry.org/cfdev/cmd/start/mocks"
+	"code.cloudfoundry.org/cfdev/config"
+	"code.cloudfoundry.org/cfdev/garden"
 	"code.cloudfoundry.org/cfdev/process"
 	"code.cloudfoundry.org/cfdev/resource"
+	"github.com/golang/mock/gomock"
 )
 
 var _ = Describe("Start", func() {
@@ -34,7 +36,7 @@ var _ = Describe("Start", func() {
 
 		startCmd      start.Start
 		exitChan      chan struct{}
-		localExitChan chan struct{}
+		localExitChan chan string
 		tmpDir        string
 	)
 
@@ -51,8 +53,9 @@ var _ = Describe("Start", func() {
 		mockCFDevD = mocks.NewMockCFDevD(mockController)
 		mockVpnkit = mocks.NewMockVpnkit(mockController)
 		mockLinuxkit = mocks.NewMockLinuxkit(mockController)
-		mockLinuxkit = mocks.NewMockGardenClient(mockController)
+		mockGardenClient = mocks.NewMockGardenClient(mockController)
 
+		localExitChan = make(chan string, 3)
 		tmpDir, err = ioutil.TempDir("", "start-test-home")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -80,6 +83,7 @@ var _ = Describe("Start", func() {
 			CFDevD:          mockCFDevD,
 			Vpnkit:          mockVpnkit,
 			Linuxkit:        mockLinuxkit,
+			GardenClient:    mockGardenClient,
 		}
 	})
 
@@ -103,16 +107,46 @@ var _ = Describe("Start", func() {
 				mockCFDevD.EXPECT().Install()
 				mockUI.EXPECT().Say("Starting VPNKit...")
 				mockVpnkit.EXPECT().Start()
+				mockVpnkit.EXPECT().Watch(localExitChan)
 				mockUI.EXPECT().Say("Starting the VM...")
 				mockLinuxkit.EXPECT().Start(7, 6666)
+				mockLinuxkit.EXPECT().Watch(localExitChan)
 				mockUI.EXPECT().Say("Waiting for Garden...")
+				mockGardenClient.EXPECT().Ping()
+				mockUI.EXPECT().Say("Deploying the BOSH Director...")
+				mockGardenClient.EXPECT().DeployBosh()
+				mockUI.EXPECT().Say("Deploying CF...")
+				mockGardenClient.EXPECT().DeployCloudFoundry([]string{})
+				mockGardenClient.EXPECT().GetServices().Return([]garden.Service{
+					{
+						Name:       "some-service",
+						Handle:     "some-handle",
+						Script:     "/path/to/some-script",
+						Deployment: "some-deployment",
+					},
+					{
+						Name:       "some-other-service",
+						Handle:     "some-other-handle",
+						Script:     "/path/to/some-other-script",
+						Deployment: "some-other-deployment",
+					},
+				}, nil)
+				mockUI.EXPECT().Say("Deploying %s...", "some-service")
+				mockGardenClient.EXPECT().DeployService("some-handle", "/path/to/some-script")
+				mockUI.EXPECT().Say("Deploying %s...", "some-other-service")
+				mockGardenClient.EXPECT().DeployService("some-other-handle", "/path/to/some-other-script")
+
+				//welcome message
+				mockUI.EXPECT().Say(gomock.Any())
+				mockAnalyticsClient.EXPECT().Event(cfanalytics.START_END)
 
 				Expect(startCmd.Execute(start.Args{
 					Cpus: 7,
-					Mem: 6666,
+					Mem:  6666,
 				})).To(Succeed())
 			})
 		})
+
 		Context("when linuxkit is already running", func() {
 			It("says cf dev is already running", func() {
 				mockToggle.EXPECT().SetProp("type", "cf")

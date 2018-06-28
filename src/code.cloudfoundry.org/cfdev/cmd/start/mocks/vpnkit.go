@@ -43,3 +43,23 @@ func (m *MockVpnkit) Start() error {
 func (mr *MockVpnkitMockRecorder) Start() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockVpnkit)(nil).Start))
 }
+
+// Stop mocks base method
+func (m *MockVpnkit) Stop() {
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop
+func (mr *MockVpnkitMockRecorder) Stop() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockVpnkit)(nil).Stop))
+}
+
+// Watch mocks base method
+func (m *MockVpnkit) Watch(arg0 chan string) {
+	m.ctrl.Call(m, "Watch", arg0)
+}
+
+// Watch indicates an expected call of Watch
+func (mr *MockVpnkitMockRecorder) Watch(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockVpnkit)(nil).Watch), arg0)
+}

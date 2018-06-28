@@ -4,6 +4,8 @@ import (
 	"io"
 	"strings"
 
+	"path/filepath"
+
 	b2 "code.cloudfoundry.org/cfdev/cmd/bosh"
 	b3 "code.cloudfoundry.org/cfdev/cmd/catalog"
 	b4 "code.cloudfoundry.org/cfdev/cmd/download"
@@ -12,12 +14,10 @@ import (
 	b7 "code.cloudfoundry.org/cfdev/cmd/telemetry"
 	b1 "code.cloudfoundry.org/cfdev/cmd/version"
 	"code.cloudfoundry.org/cfdev/config"
+	"code.cloudfoundry.org/cfdev/network"
 	"code.cloudfoundry.org/cfdev/process"
 	cfdevdClient "code.cloudfoundry.org/cfdevd/client"
-	launchdModels "code.cloudfoundry.org/cfdevd/launchd/models"
 	"github.com/spf13/cobra"
-	"code.cloudfoundry.org/cfdev/network"
-	"path/filepath"
 )
 
 type UI interface {

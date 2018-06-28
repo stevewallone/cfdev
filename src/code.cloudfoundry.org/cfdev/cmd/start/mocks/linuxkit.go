@@ -43,3 +43,23 @@ func (m *MockLinuxkit) Start(arg0, arg1 int) error {
 func (mr *MockLinuxkitMockRecorder) Start(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockLinuxkit)(nil).Start), arg0, arg1)
 }
+
+// Stop mocks base method
+func (m *MockLinuxkit) Stop() {
+	m.ctrl.Call(m, "Stop")
+}
+
+// Stop indicates an expected call of Stop
+func (mr *MockLinuxkitMockRecorder) Stop() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockLinuxkit)(nil).Stop))
+}
+
+// Watch mocks base method
+func (m *MockLinuxkit) Watch(arg0 chan string) {
+	m.ctrl.Call(m, "Watch", arg0)
+}
+
+// Watch indicates an expected call of Watch
+func (mr *MockLinuxkitMockRecorder) Watch(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Watch", reflect.TypeOf((*MockLinuxkit)(nil).Watch), arg0)
+}
