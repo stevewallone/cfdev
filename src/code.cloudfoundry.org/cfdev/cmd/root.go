@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"io"
+	"net/http"
 	"strings"
+	"time"
 
 	"path/filepath"
 
@@ -14,9 +16,13 @@ import (
 	b7 "code.cloudfoundry.org/cfdev/cmd/telemetry"
 	b1 "code.cloudfoundry.org/cfdev/cmd/version"
 	"code.cloudfoundry.org/cfdev/config"
+	"code.cloudfoundry.org/cfdev/garden"
 	"code.cloudfoundry.org/cfdev/network"
 	"code.cloudfoundry.org/cfdev/process"
+	"code.cloudfoundry.org/cfdev/resource"
+	"code.cloudfoundry.org/cfdev/resource/progress"
 	cfdevdClient "code.cloudfoundry.org/cfdevd/client"
+	"code.cloudfoundry.org/cfdevd/launchd"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +32,7 @@ type UI interface {
 }
 
 type Launchd interface {
-	AddDaemon(launchdlaunchd.DaemonSpec) error
+	AddDaemon(launchd.DaemonSpec) error
 	RemoveDaemon(label string) error
 	Start(label string) error
 	Stop(label string) error
@@ -56,6 +62,15 @@ func NewRoot(exit chan struct{}, ui UI, config config.Config, launchd Launchd, a
 	usageTemplate := strings.Replace(root.UsageTemplate(), "\n"+`Use "{{.CommandPath}} [command] --help" for more information about a command.`, "", -1)
 	root.SetUsageTemplate(usageTemplate)
 
+	writer := ui.Writer()
+	cache := &resource.Cache{
+		Dir:       config.CacheDir,
+		HttpDo:    http.DefaultClient.Do,
+		Progress:  progress.New(writer),
+		RetryWait: time.Second,
+		Writer:    writer,
+	}
+
 	dev := &cobra.Command{
 		Use:           "dev",
 		Short:         "Start and stop a single vm CF deployment running on your workstation",
@@ -70,9 +85,10 @@ func NewRoot(exit chan struct{}, ui UI, config config.Config, launchd Launchd, a
 			Config: config,
 		},
 		&b2.Bosh{
-			Exit:   exit,
-			UI:     ui,
-			Config: config,
+			Exit:         exit,
+			UI:           ui,
+			Config:       config,
+			GardenClient: garden.New(),
 		},
 		&b3.Catalog{
 			UI:     ui,
@@ -85,15 +101,17 @@ func NewRoot(exit chan struct{}, ui UI, config config.Config, launchd Launchd, a
 		},
 		&b5.Start{
 			Exit:            exit,
-			LocalExit:       make(chan struct{}, 3),
+			LocalExit:       make(chan string, 3),
 			UI:              ui,
 			Config:          config,
-			Launchd:         launchd,
-			ProcManager:     &process.Manager{},
+			Cache:           cache,
 			Analytics:       analyticsClient,
 			AnalyticsToggle: analyticsToggle,
 			HostNet:         &network.HostNet{},
-			CFDevD:          process.CFDevD{ExecutablePath: filepath.Join(config.CacheDir, "cfdevd")},
+			CFDevD:          &process.CFDevD{ExecutablePath: filepath.Join(config.CacheDir, "cfdevd")},
+			VpnKit:          &process.VpnKit{Config: config, Launchd: launchd},
+			LinuxKit:        &process.LinuxKit{Config: config, Launchd: launchd},
+			GardenClient:    garden.New(),
 		},
 		&b6.Stop{
 			Config:       config,

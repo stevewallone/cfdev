@@ -15,7 +15,6 @@ import (
 	"code.cloudfoundry.org/cfdev/env"
 	"code.cloudfoundry.org/cfdev/errors"
 	"code.cloudfoundry.org/cfdev/garden"
-	"code.cloudfoundry.org/cfdev/process"
 	"code.cloudfoundry.org/cfdev/resource"
 	"github.com/spf13/cobra"
 )
@@ -24,16 +23,6 @@ import (
 type UI interface {
 	Say(message string, args ...interface{})
 	Writer() io.Writer
-}
-
-//go:generate mockgen -package mocks -destination mocks/launchd.go code.cloudfoundry.org/cfdev/cmd/start Launchd
-type Launchd interface {
-	IsRunning(label string) (bool, error)
-}
-
-//go:generate mockgen -package mocks -destination mocks/proc_manager.go code.cloudfoundry.org/cfdev/cmd/start ProcManager
-type ProcManager interface {
-	SafeKill(pidfile, name string) error
 }
 
 //go:generate mockgen -package mocks -destination mocks/analytics_client.go code.cloudfoundry.org/cfdev/cmd/start AnalyticsClient
@@ -63,18 +52,19 @@ type CFDevD interface {
 	Install() error
 }
 
-//go:generate mockgen -package mocks -destination mocks/vpnkit.go code.cloudfoundry.org/cfdev/cmd/start Vpnkit
-type Vpnkit interface {
+//go:generate mockgen -package mocks -destination mocks/vpnkit.go code.cloudfoundry.org/cfdev/cmd/start VpnKit
+type VpnKit interface {
 	Start() error
 	Stop()
 	Watch(chan string)
 }
 
-//go:generate mockgen -package mocks -destination mocks/linuxkit.go code.cloudfoundry.org/cfdev/cmd/start Linuxkit
-type Linuxkit interface {
-	Start(int, int) error
+//go:generate mockgen -package mocks -destination mocks/linuxkit.go code.cloudfoundry.org/cfdev/cmd/start LinuxKit
+type LinuxKit interface {
+	Start(int, int, string) error
 	Stop()
 	Watch(chan string)
+	IsRunning() (bool, error)
 }
 
 //go:generate mockgen -package mocks -destination mocks/garden.go code.cloudfoundry.org/cfdev/cmd/start GardenClient
@@ -84,6 +74,7 @@ type GardenClient interface {
 	DeployCloudFoundry([]string) error
 	DeployService(string, string) error
 	GetServices() ([]garden.Service, error)
+	ReportProgress(garden.UI, string)
 }
 
 type Args struct {
@@ -98,15 +89,13 @@ type Start struct {
 	LocalExit       chan string
 	UI              UI
 	Config          config.Config
-	Launchd         Launchd
-	ProcManager     ProcManager
 	Analytics       AnalyticsClient
 	AnalyticsToggle Toggle
 	HostNet         HostNet
 	Cache           Cache
 	CFDevD          CFDevD
-	Vpnkit          Vpnkit
-	Linuxkit        Linuxkit
+	VpnKit          VpnKit
+	LinuxKit        LinuxKit
 	GardenClient    GardenClient
 }
 
@@ -139,17 +128,17 @@ func (s *Start) Execute(args Args) error {
 		case name := <-s.LocalExit:
 			s.UI.Say("ERROR: %s has stopped", name)
 		}
-		s.Linuxkit.Stop()
-		s.Vpnkit.Stop()
-		s.ProcManager.SafeKill(filepath.Join(s.Config.StateDir, "hyperkit.pid"), "hyperkit")
+		s.LinuxKit.Stop()
+		s.VpnKit.Stop()
 		os.Exit(128)
 	}()
 
 	depsIsoName := "cf"
+	depsIsoPath := filepath.Join(s.Config.CacheDir, "cf-deps.iso")
 	if args.DepsIsoPath != "" {
 		depsIsoName = filepath.Base(args.DepsIsoPath)
 		var err error
-		args.DepsIsoPath, err = filepath.Abs(args.DepsIsoPath)
+		depsIsoPath, err = filepath.Abs(args.DepsIsoPath)
 		if err != nil {
 			return errors.SafeWrap(err, "determining absolute path to deps iso")
 		}
@@ -157,7 +146,7 @@ func (s *Start) Execute(args Args) error {
 	s.AnalyticsToggle.SetProp("type", depsIsoName)
 	s.Analytics.Event(cfanalytics.START_BEGIN)
 
-	if running, err := s.Launchd.IsRunning(process.LinuxKitLabel); err != nil {
+	if running, err := s.LinuxKit.IsRunning(); err != nil {
 		return errors.SafeWrap(err, "is linuxkit running")
 	} else if running {
 		s.UI.Say("CF Dev is already running...")
@@ -193,16 +182,16 @@ func (s *Start) Execute(args Args) error {
 	}
 
 	s.UI.Say("Starting VPNKit...")
-	if err := s.Vpnkit.Start(); err != nil {
+	if err := s.VpnKit.Start(); err != nil {
 		return errors.SafeWrap(err, "starting vpnkit")
 	}
-	s.Vpnkit.Watch(s.LocalExit)
+	s.VpnKit.Watch(s.LocalExit)
 
 	s.UI.Say("Starting the VM...")
-	if err := s.Linuxkit.Start(args.Cpus, args.Mem); err != nil {
+	if err := s.LinuxKit.Start(args.Cpus, args.Mem, depsIsoPath); err != nil {
 		return errors.SafeWrap(err, "starting linuxkit")
 	}
-	s.Linuxkit.Watch(s.LocalExit)
+	s.LinuxKit.Watch(s.LocalExit)
 
 	s.UI.Say("Waiting for Garden...")
 	s.waitForGarden()
@@ -213,8 +202,7 @@ func (s *Start) Execute(args Args) error {
 	}
 
 	s.UI.Say("Deploying CF...")
-	// TODO test the progress reporter
-	// go reportDeployProgress(s.UI, garden, "cf")
+	s.GardenClient.ReportProgress(s.UI, "cf")
 	if err := s.GardenClient.DeployCloudFoundry([]string{}); err != nil {
 		return errors.SafeWrap(err, "Failed to deploy the Cloud Foundry")
 	}
@@ -225,7 +213,7 @@ func (s *Start) Execute(args Args) error {
 	}
 	for _, service := range services {
 		s.UI.Say("Deploying %s...", service.Name)
-		// go reportDeployProgress(s.UI, garden, service.Deployment)
+		s.GardenClient.ReportProgress(s.UI, service.Deployment)
 		if err := s.GardenClient.DeployService(service.Handle, service.Script); err != nil {
 			return errors.SafeWrap(err, fmt.Sprintf("Failed to deploy %s", service.Name))
 		}
@@ -263,7 +251,7 @@ func (s *Start) waitForGarden() {
 }
 
 func cleanupStateDir(cfg config.Config) error {
-	for _, dir := range []string{cfg.StateDir, cfg.VpnkitStateDir} {
+	for _, dir := range []string{cfg.StateDir, cfg.VpnKitStateDir} {
 		if err := os.RemoveAll(dir); err != nil {
 			return errors.SafeWrap(err, "Unable to clean up .cfdev state directory")
 		}
@@ -299,22 +287,3 @@ func (s *Start) parseDockerRegistriesFlag(flag string) ([]string, error) {
 	}
 	return registries, nil
 }
-
-// func (s *Start) reportDeployProgress(UI UI, garden client.Client, deploymentName string) {
-// start := time.Now()
-// ui := singlelinewriter.New(UI.Writer())
-// ui.Say("  Uploading Releases")
-// b, err := bosh.New(garden)
-// if err == nil {
-// 	ch := b.VMProgress(deploymentName)
-// 	for p := range ch {
-// 		if p.Total > 0 {
-// 			ui.Say("  Progress: %d of %d (%s)", p.Done, p.Total, p.Duration.Round(time.Second))
-// 		} else {
-// 			ui.Say("  Uploaded Releases: %d (%s)", p.Releases, p.Duration.Round(time.Second))
-// 		}
-// 	}
-// 	ui.Close()
-// 	UI.Say("  Done (%s)", time.Now().Sub(start).Round(time.Second))
-// }
-// }

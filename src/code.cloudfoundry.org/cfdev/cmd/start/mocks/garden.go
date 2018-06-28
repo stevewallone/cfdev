@@ -93,3 +93,13 @@ func (m *MockGardenClient) Ping() error {
 func (mr *MockGardenClientMockRecorder) Ping() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockGardenClient)(nil).Ping))
 }
+
+// ReportProgress mocks base method
+func (m *MockGardenClient) ReportProgress(arg0 garden.UI, arg1 string) {
+	m.ctrl.Call(m, "ReportProgress", arg0, arg1)
+}
+
+// ReportProgress indicates an expected call of ReportProgress
+func (mr *MockGardenClientMockRecorder) ReportProgress(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReportProgress", reflect.TypeOf((*MockGardenClient)(nil).ReportProgress), arg0, arg1)
+}

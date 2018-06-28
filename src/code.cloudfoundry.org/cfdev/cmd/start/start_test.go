@@ -13,7 +13,6 @@ import (
 	"code.cloudfoundry.org/cfdev/cmd/start/mocks"
 	"code.cloudfoundry.org/cfdev/config"
 	"code.cloudfoundry.org/cfdev/garden"
-	"code.cloudfoundry.org/cfdev/process"
 	"code.cloudfoundry.org/cfdev/resource"
 	"github.com/golang/mock/gomock"
 )
@@ -23,48 +22,46 @@ var _ = Describe("Start", func() {
 	var (
 		mockController      *gomock.Controller
 		mockUI              *mocks.MockUI
-		mockLaunchd         *mocks.MockLaunchd
-		mockProcManager     *mocks.MockProcManager
 		mockAnalyticsClient *mocks.MockAnalyticsClient
 		mockToggle          *mocks.MockToggle
 		mockHostNet         *mocks.MockHostNet
 		mockCache           *mocks.MockCache
 		mockCFDevD          *mocks.MockCFDevD
-		mockVpnkit          *mocks.MockVpnkit
-		mockLinuxkit        *mocks.MockLinuxkit
+		mockVpnKit          *mocks.MockVpnKit
+		mockLinuxKit        *mocks.MockLinuxKit
 		mockGardenClient    *mocks.MockGardenClient
 
 		startCmd      start.Start
 		exitChan      chan struct{}
 		localExitChan chan string
 		tmpDir        string
+		cacheDir      string
 	)
 
 	BeforeEach(func() {
 		var err error
 		mockController = gomock.NewController(GinkgoT())
 		mockUI = mocks.NewMockUI(mockController)
-		mockLaunchd = mocks.NewMockLaunchd(mockController)
-		mockProcManager = mocks.NewMockProcManager(mockController)
 		mockAnalyticsClient = mocks.NewMockAnalyticsClient(mockController)
 		mockToggle = mocks.NewMockToggle(mockController)
 		mockHostNet = mocks.NewMockHostNet(mockController)
 		mockCache = mocks.NewMockCache(mockController)
 		mockCFDevD = mocks.NewMockCFDevD(mockController)
-		mockVpnkit = mocks.NewMockVpnkit(mockController)
-		mockLinuxkit = mocks.NewMockLinuxkit(mockController)
+		mockVpnKit = mocks.NewMockVpnKit(mockController)
+		mockLinuxKit = mocks.NewMockLinuxKit(mockController)
 		mockGardenClient = mocks.NewMockGardenClient(mockController)
 
 		localExitChan = make(chan string, 3)
 		tmpDir, err = ioutil.TempDir("", "start-test-home")
+		cacheDir = filepath.Join(tmpDir, "some-cache-dir")
 		Expect(err).NotTo(HaveOccurred())
 
 		startCmd = start.Start{
 			Config: config.Config{
 				CFDevHome:      tmpDir,
 				StateDir:       filepath.Join(tmpDir, "some-state-dir"),
-				VpnkitStateDir: filepath.Join(tmpDir, "some-vpnkit-state-dir"),
-				CacheDir:       filepath.Join(tmpDir, "some-cache-dir"),
+				VpnKitStateDir: filepath.Join(tmpDir, "some-vpnkit-state-dir"),
+				CacheDir:       cacheDir,
 				CFRouterIP:     "some-cf-router-ip",
 				BoshDirectorIP: "some-bosh-director-ip",
 				Dependencies: resource.Catalog{
@@ -74,15 +71,13 @@ var _ = Describe("Start", func() {
 			Exit:            exitChan,
 			LocalExit:       localExitChan,
 			UI:              mockUI,
-			Launchd:         mockLaunchd,
-			ProcManager:     mockProcManager,
 			Analytics:       mockAnalyticsClient,
 			AnalyticsToggle: mockToggle,
 			HostNet:         mockHostNet,
 			Cache:           mockCache,
 			CFDevD:          mockCFDevD,
-			Vpnkit:          mockVpnkit,
-			Linuxkit:        mockLinuxkit,
+			VpnKit:          mockVpnKit,
+			LinuxKit:        mockLinuxKit,
 			GardenClient:    mockGardenClient,
 		}
 	})
@@ -97,7 +92,7 @@ var _ = Describe("Start", func() {
 			It("starts the vm with default settings", func() {
 				mockToggle.EXPECT().SetProp("type", "cf")
 				mockAnalyticsClient.EXPECT().Event(cfanalytics.START_BEGIN)
-				mockLaunchd.EXPECT().IsRunning(process.LinuxKitLabel).Return(false, nil)
+				mockLinuxKit.EXPECT().IsRunning().Return(false, nil)
 				mockHostNet.EXPECT().AddLoopbackAliases("some-bosh-director-ip", "some-cf-router-ip")
 				mockUI.EXPECT().Say("Downloading Resources...")
 				mockCache.EXPECT().Sync(resource.Catalog{
@@ -106,16 +101,17 @@ var _ = Describe("Start", func() {
 				mockUI.EXPECT().Say("Installing cfdevd network helper...")
 				mockCFDevD.EXPECT().Install()
 				mockUI.EXPECT().Say("Starting VPNKit...")
-				mockVpnkit.EXPECT().Start()
-				mockVpnkit.EXPECT().Watch(localExitChan)
+				mockVpnKit.EXPECT().Start()
+				mockVpnKit.EXPECT().Watch(localExitChan)
 				mockUI.EXPECT().Say("Starting the VM...")
-				mockLinuxkit.EXPECT().Start(7, 6666)
-				mockLinuxkit.EXPECT().Watch(localExitChan)
+				mockLinuxKit.EXPECT().Start(7, 6666, filepath.Join(cacheDir, "cf-deps.iso"))
+				mockLinuxKit.EXPECT().Watch(localExitChan)
 				mockUI.EXPECT().Say("Waiting for Garden...")
 				mockGardenClient.EXPECT().Ping()
 				mockUI.EXPECT().Say("Deploying the BOSH Director...")
 				mockGardenClient.EXPECT().DeployBosh()
 				mockUI.EXPECT().Say("Deploying CF...")
+				mockGardenClient.EXPECT().ReportProgress(mockUI, "cf")
 				mockGardenClient.EXPECT().DeployCloudFoundry([]string{})
 				mockGardenClient.EXPECT().GetServices().Return([]garden.Service{
 					{
@@ -132,8 +128,10 @@ var _ = Describe("Start", func() {
 					},
 				}, nil)
 				mockUI.EXPECT().Say("Deploying %s...", "some-service")
+				mockGardenClient.EXPECT().ReportProgress(mockUI, "some-deployment")
 				mockGardenClient.EXPECT().DeployService("some-handle", "/path/to/some-script")
 				mockUI.EXPECT().Say("Deploying %s...", "some-other-service")
+				mockGardenClient.EXPECT().ReportProgress(mockUI, "some-other-deployment")
 				mockGardenClient.EXPECT().DeployService("some-other-handle", "/path/to/some-other-script")
 
 				//welcome message
@@ -151,7 +149,7 @@ var _ = Describe("Start", func() {
 			It("says cf dev is already running", func() {
 				mockToggle.EXPECT().SetProp("type", "cf")
 				mockAnalyticsClient.EXPECT().Event(cfanalytics.START_BEGIN)
-				mockLaunchd.EXPECT().IsRunning(process.LinuxKitLabel).Return(true, nil)
+				mockLinuxKit.EXPECT().IsRunning().Return(true, nil)
 				mockUI.EXPECT().Say("CF Dev is already running...")
 				mockAnalyticsClient.EXPECT().Event(cfanalytics.START_END, map[string]interface{}{"alreadyrunning": true})
 

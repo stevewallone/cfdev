@@ -50,8 +50,8 @@ type Service struct {
 	Deployment string `yaml:"deployment"`
 }
 
-func GetServices(client garden.Client) ([]Service, error) {
-	container, err := client.Create(containerSpec("get-services"))
+func (g *Garden) GetServices() ([]Service, error) {
+	container, err := g.Client.Create(containerSpec("get-services"))
 	if err != nil {
 		return nil, err
 	}

@@ -20,7 +20,7 @@ var _ = Describe("VpnKit", func() {
 		lctl           *launchd.Launchd
 		tmpDir         string
 		vpnkitStateDir string
-		vkit           process.Vpnkit
+		vkit           process.VpnKit
 	)
 
 	BeforeEach(func() {
@@ -40,10 +40,10 @@ var _ = Describe("VpnKit", func() {
 			PListDir: tmpDir,
 		}
 
-		vkit = process.Vpnkit{
+		vkit = process.VpnKit{
 			Config: config.Config{
 				CacheDir:       cacheDir,
-				VpnkitStateDir: vpnkitStateDir,
+				VpnKitStateDir: vpnkitStateDir,
 				StateDir:       stateDir,
 				CFDevHome:      homeDir,
 			},

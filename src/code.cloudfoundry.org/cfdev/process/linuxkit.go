@@ -19,9 +19,8 @@ type UI interface {
 }
 
 type LinuxKit struct {
-	Config      config.Config
-	DepsIsoPath string
-	Launchd     Launchd
+	Config  config.Config
+	Launchd Launchd
 }
 
 type Launchd interface {
@@ -33,8 +32,8 @@ type Launchd interface {
 
 const LinuxKitLabel = "org.cloudfoundry.cfdev.linuxkit"
 
-func (l *LinuxKit) Start(cpus int, mem int) error {
-	daemonSpec, err := l.DaemonSpec(cpus, mem)
+func (l *LinuxKit) Start(cpus int, mem int, depsIsoPath string) error {
+	daemonSpec, err := l.DaemonSpec(cpus, mem, depsIsoPath)
 	if err != nil {
 		return err
 	}
@@ -46,25 +45,26 @@ func (l *LinuxKit) Start(cpus int, mem int) error {
 
 func (l *LinuxKit) Stop() {
 	l.Launchd.Stop(LinuxKitLabel)
+	procManager := &Manager{}
+	procManager.SafeKill(filepath.Join(l.Config.StateDir, "hyperkit.pid"), "hyperkit")
 }
 
-func (l *LinuxKit) DaemonSpec(cpus, mem int) (launchd.DaemonSpec, error) {
+func (l *LinuxKit) IsRunning() (bool, error) {
+	return l.Launchd.IsRunning(LinuxKitLabel)
+}
+
+func (l *LinuxKit) DaemonSpec(cpus, mem int, depsIsoPath string) (launchd.DaemonSpec, error) {
 	linuxkit := filepath.Join(l.Config.CacheDir, "linuxkit")
 	hyperkit := filepath.Join(l.Config.CacheDir, "hyperkit")
 	uefi := filepath.Join(l.Config.CacheDir, "UEFI.fd")
 	qcowtool := filepath.Join(l.Config.CacheDir, "qcow-tool")
-	vpnkitEthSock := filepath.Join(l.Config.VpnkitStateDir, "vpnkit_eth.sock")
-	vpnkitPortSock := filepath.Join(l.Config.VpnkitStateDir, "vpnkit_port.sock")
+	vpnkitEthSock := filepath.Join(l.Config.VpnKitStateDir, "vpnkit_eth.sock")
+	vpnkitPortSock := filepath.Join(l.Config.VpnKitStateDir, "vpnkit_port.sock")
 
-	if l.DepsIsoPath == "" {
-		l.DepsIsoPath = filepath.Join(l.Config.CacheDir, "cf-deps.iso")
-	} else {
-		if _, err := os.Stat(l.DepsIsoPath); os.IsNotExist(err) {
-			return launchd.DaemonSpec{}, err
-		}
+	if _, err := os.Stat(depsIsoPath); os.IsNotExist(err) {
+		return launchd.DaemonSpec{}, err
 	}
 
-	dependencyImagePath := l.DepsIsoPath
 	osImagePath := filepath.Join(l.Config.CacheDir, "cfdev-efi.iso")
 
 	diskArgs := []string{
@@ -90,7 +90,7 @@ func (l *LinuxKit) DaemonSpec(cpus, mem int) (launchd.DaemonSpec, error) {
 			"-networking", fmt.Sprintf("vpnkit,%v,%v", vpnkitEthSock, vpnkitPortSock),
 			"-fw", uefi,
 			"-disk", strings.Join(diskArgs, ","),
-			"-disk", "file=" + dependencyImagePath,
+			"-disk", "file=" + depsIsoPath,
 			"-state", l.Config.StateDir,
 			"--uefi",
 			osImagePath,
