@@ -166,10 +166,10 @@ func (s *Start) Execute(args Args) error {
 		return errors.SafeWrap(err, "adding aliases")
 	}
 
-	// registries, err := s.parseDockerRegistriesFlag(args.Registries)
-	// if err != nil {
-	// 	return errors.SafeWrap(err, "Unable to parse docker registries")
-	// }
+	registries, err := s.parseDockerRegistriesFlag(args.Registries)
+	if err != nil {
+		return errors.SafeWrap(err, "Unable to parse docker registries")
+	}
 
 	s.UI.Say("Downloading Resources...")
 	if err := s.Cache.Sync(s.Config.Dependencies); err != nil {
@@ -203,7 +203,7 @@ func (s *Start) Execute(args Args) error {
 
 	s.UI.Say("Deploying CF...")
 	s.GardenClient.ReportProgress(s.UI, "cf")
-	if err := s.GardenClient.DeployCloudFoundry([]string{}); err != nil {
+	if err := s.GardenClient.DeployCloudFoundry(registries); err != nil {
 		return errors.SafeWrap(err, "Failed to deploy the Cloud Foundry")
 	}
 

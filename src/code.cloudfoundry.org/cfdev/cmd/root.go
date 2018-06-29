@@ -3,6 +3,7 @@ package cmd
 import (
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -62,13 +63,15 @@ func NewRoot(exit chan struct{}, ui UI, config config.Config, launchd Launchd, a
 	usageTemplate := strings.Replace(root.UsageTemplate(), "\n"+`Use "{{.CommandPath}} [command] --help" for more information about a command.`, "", -1)
 	root.SetUsageTemplate(usageTemplate)
 
+	skipVerify := strings.ToLower(os.Getenv("CFDEV_SKIP_ASSET_CHECK"))
 	writer := ui.Writer()
 	cache := &resource.Cache{
-		Dir:       config.CacheDir,
-		HttpDo:    http.DefaultClient.Do,
-		Progress:  progress.New(writer),
-		RetryWait: time.Second,
-		Writer:    writer,
+		Dir:                   config.CacheDir,
+		HttpDo:                http.DefaultClient.Do,
+		SkipAssetVerification: skipVerify == "true",
+		Progress:              progress.New(writer),
+		RetryWait:             time.Second,
+		Writer:                writer,
 	}
 
 	dev := &cobra.Command{

@@ -1,15 +1,16 @@
 package privileged_test
 
 import (
+	"os/exec"
+
+	"code.cloudfoundry.org/cfdev/network"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/cfdev/network"
-	"os/exec"
 	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Start", func() {
-	FDescribe("AddLoopbackAlias", func() {
+	Describe("AddLoopbackAlias", func() {
 		BeforeEach(func() {
 			hostNet := network.HostNet{}
 			Expect(hostNet.AddLoopbackAliases("123.123.123.123", "6.6.6.6")).To(Succeed())
