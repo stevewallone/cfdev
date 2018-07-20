@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/cfdev/singlelinewriter"
 	"code.cloudfoundry.org/cfdev/errors"
 	"fmt"
+	"code.cloudfoundry.org/cfdev/util"
 )
 
 type UI interface {
@@ -16,7 +17,14 @@ type UI interface {
 }
 
 func (g *Garden) DeployServices(ui UI, services []Service) error {
-	config, err := g.FetchBOSHConfig()
+	var config bosh.Config
+
+	err := util.Perform(5, func() error {
+		var terr error
+		config, terr = g.FetchBOSHConfig()
+		return terr
+	})
+
 	if err != nil {
 		return err
 	}
@@ -79,7 +87,15 @@ func (g *Garden) ReportProgress(ui UI, deploymentName string) {
 		start := time.Now()
 		lineWriter := singlelinewriter.New(ui.Writer())
 		lineWriter.Say("  Uploading Releases")
-		config, err := g.FetchBOSHConfig()
+
+		var config bosh.Config
+
+		util.Perform(5, func() error {
+			var terr error
+			config, terr = g.FetchBOSHConfig()
+			return terr
+		})
+
 		b, err := bosh.New(config)
 		if err == nil {
 			ch := b.VMProgress(deploymentName)
