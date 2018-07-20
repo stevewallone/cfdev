@@ -4,11 +4,17 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/cfdev/errors"
+	"fmt"
 	boshdir "github.com/cloudfoundry/bosh-cli/director"
-	"github.com/onsi/ginkgo"
+	"io"
 )
 
-var VMProgressInterval = 1 * time.Second
+const (
+	StateUploadingReleases = "uploading-releases"
+	StateDeploying         = "deploying"
+
+	vmProgressInterval     = 1 * time.Second
+)
 
 type Bosh struct {
 	dir boshdir.Director
@@ -23,6 +29,10 @@ type Config struct {
 	GatewayHost       string
 	GatewayPrivateKey string
 	GatewayUsername   string
+}
+
+type UI interface {
+	Writer() io.Writer
 }
 
 func New(config Config) (*Bosh, error) {
@@ -45,12 +55,6 @@ func NewWithDirector(dir boshdir.Director) *Bosh {
 	return &Bosh{dir: dir}
 }
 
-const (
-	UploadingReleases = "uploading-releases"
-	Deploying         = "deploying"
-	RunningErrand     = "running-errand"
-)
-
 type VMProgress struct {
 	State    string
 	Releases int
@@ -59,78 +63,57 @@ type VMProgress struct {
 	Duration time.Duration
 }
 
-func (b *Bosh) VMProgress(deploymentName string) chan VMProgress {
-	start := time.Now()
-	var dep boshdir.Deployment
+func (b *Bosh) ReportProgress(ui UI, name string, isErrand bool, doneChan chan bool) {
+	var (
+		start               = time.Now()
+		clearTerminalPrefix = "\r\033[K  "
+		dep                 boshdir.Deployment
+	)
+
+	if isErrand {
+		for {
+			select {
+			case <-doneChan:
+				return
+			default:
+				ui.Writer().Write([]byte(fmt.Sprintf(clearTerminalPrefix+"Running Errand (%s)", time.Now().Sub(start))))
+
+				time.Sleep(vmProgressInterval)
+			}
+		}
+	}
 
 	for {
 		var err error
-		dep, err = b.dir.FindDeployment(deploymentName)
-		if err == nil {
+		if dep, err = b.dir.FindDeployment(name); err == nil {
 			break
 		}
 	}
 
-	ch := make(chan VMProgress, 1)
-	total := 0
-	go func() {
-		defer ginkgo.GinkgoRecover()
+	for {
+		select {
+		case <-doneChan:
+			return
+		default:
+			p := b.getVMProgress(start, dep)
 
-		for {
-			time.Sleep(VMProgressInterval)
-
-			vmInfos, err := dep.VMInfos()
-			if err != nil || len(vmInfos) == 0 {
-				if total == 0 {
-					rels, err := b.dir.Releases()
-					if err == nil {
-						ch <- VMProgress{Releases: len(rels), Duration: time.Now().Sub(start)}
-					}
-				}
-				continue
+			switch p.State {
+			case StateUploadingReleases:
+				ui.Writer().Write([]byte(fmt.Sprintf(clearTerminalPrefix+"Uploaded Releases: %d (%s)", p.Releases, p.Duration.Round(time.Second))))
+			case StateDeploying:
+				ui.Writer().Write([]byte(fmt.Sprintf(clearTerminalPrefix+"Progress: %d of %d (%s)", p.Done, p.Total, p.Duration.Round(time.Second))))
 			}
 
-			total = len(vmInfos)
-			numDone := 0
-			for _, v := range vmInfos {
-				if v.ProcessState == "running" && len(v.Processes) > 0 {
-					numDone++
-				}
-			}
-
-			ch <- VMProgress{Total: total, Done: numDone, Duration: time.Now().Sub(start)}
-
-			if numDone >= len(vmInfos) {
-				close(ch)
-				return
-			}
+			time.Sleep(vmProgressInterval)
 		}
-	}()
-
-	return ch
+	}
 }
 
-func (b *Bosh) GetVMProgress(start time.Time, deploymentName string, isErrand bool) VMProgress {
-	if isErrand {
-		return VMProgress{State: RunningErrand, Duration: time.Now().Sub(start)}
-	}
-
-	var dep boshdir.Deployment
-
-	for {
-		var err error
-		dep, err = b.dir.FindDeployment(deploymentName)
-		if err == nil {
-			break
-		}
-	}
-
+func (b *Bosh) getVMProgress(start time.Time, dep boshdir.Deployment) VMProgress {
 	vmInfos, err := dep.VMInfos()
-	if err != nil || len(vmInfos) == 0 {
-		rels, err := b.dir.Releases()
-		if err == nil {
-			return VMProgress{State: UploadingReleases, Releases: len(rels), Duration: time.Now().Sub(start)}
-		}
+	if len(vmInfos) == 0 || err != nil {
+		rels, _ := b.dir.Releases()
+		return VMProgress{State: StateUploadingReleases, Releases: len(rels), Duration: time.Now().Sub(start)}
 	}
 
 	total := len(vmInfos)
@@ -141,5 +124,5 @@ func (b *Bosh) GetVMProgress(start time.Time, deploymentName string, isErrand bo
 		}
 	}
 
-	return VMProgress{State: Deploying, Total: total, Done: numDone, Duration: time.Now().Sub(start)}
+	return VMProgress{State: StateDeploying, Total: total, Done: numDone, Duration: time.Now().Sub(start)}
 }

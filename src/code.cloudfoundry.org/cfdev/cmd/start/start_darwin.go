@@ -136,9 +136,13 @@ func (s *Start) Execute(args Args) error {
 		return errors.SafeWrap(err, "Failed to deploy the BOSH Director")
 	}
 
+	doneChan := make(chan bool, 1)
+
 	s.UI.Say("Deploying CF...")
-	s.GardenClient.ReportProgress(s.UI, "cf")
-	if err := s.GardenClient.DeployCloudFoundry(registries); err != nil {
+	go s.GardenClient.Report(s.UI, "cf", false, doneChan)
+	err = s.GardenClient.DeployCloudFoundry(registries)
+	doneChan <- true
+	if err != nil {
 		return errors.SafeWrap(err, "Failed to deploy the Cloud Foundry")
 	}
 
@@ -147,9 +151,14 @@ func (s *Start) Execute(args Args) error {
 		return errors.SafeWrap(err, "Failed to get list of services to deploy")
 	}
 
-	err = s.GardenClient.DeployServices(s.UI, services)
-	if err != nil {
-		return err
+	for _, service := range services {
+		s.UI.Say("Deploying %s...", service.Name)
+		go s.GardenClient.Report(s.UI, service.Deployment, service.IsErrand, doneChan)
+		err = s.GardenClient.DeployService(service.Handle, service.Script)
+		doneChan <- true
+		if err != nil {
+			return errors.SafeWrap(err, "Failed to deploy " + service.Name)
+		}
 	}
 
 	s.UI.Say(`

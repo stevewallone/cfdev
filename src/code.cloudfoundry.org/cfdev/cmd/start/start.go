@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/cfdev/errors"
 	"code.cloudfoundry.org/cfdev/garden"
 	"code.cloudfoundry.org/cfdev/resource"
+	"code.cloudfoundry.org/cfdev/bosh"
 )
 
 //go:generate mockgen -package mocks -destination mocks/ui.go code.cloudfoundry.org/cfdev/cmd/start UI
@@ -71,8 +72,8 @@ type GardenClient interface {
 	DeployBosh() error
 	DeployCloudFoundry([]string) error
 	GetServices() ([]garden.Service, string, error)
-	DeployServices(garden.UI, []garden.Service) error
-	ReportProgress(garden.UI, string)
+	DeployService(handle string, script string) error
+	Report(ui bosh.UI, name string, isErrand bool, doneChan chan bool)
 }
 
 type Args struct {
