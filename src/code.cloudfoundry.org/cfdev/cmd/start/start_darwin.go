@@ -8,13 +8,27 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/cfdev/cfanalytics"
-	"code.cloudfoundry.org/cfdev/errors"
-	"github.com/spf13/cobra"
 	"code.cloudfoundry.org/cfdev/config"
 	"code.cloudfoundry.org/cfdev/env"
-	"path/filepath"
+	"code.cloudfoundry.org/cfdev/errors"
 	"code.cloudfoundry.org/cfdev/resource"
+	"github.com/spf13/cobra"
+	"github.com/hooklift/iso9660"
+	"io"
+	"io/ioutil"
+	"path/filepath"
+
+	"code.cloudfoundry.org/cfdev/garden"
+	"gopkg.in/yaml.v2"
 )
+
+var (
+	services     []garden.Service
+	message      string
+	isCompatible bool
+)
+
+const compatibilityVersion = "v1"
 
 func (s *Start) Cmd() *cobra.Command {
 	args := Args{}
@@ -66,6 +80,15 @@ func (s *Start) Execute(args Args) error {
 			return fmt.Errorf("no file found at: %s", depsIsoPath)
 		}
 
+		services, message, isCompatible, err = readIsoAndVerifyVersion(depsIsoPath)
+		if err != nil {
+			return errors.SafeWrap(err, fmt.Sprintf("%s is not compatible with CF Dev. Please use a compatible file.", depsIsoName))
+		}
+
+		if !isCompatible {
+			return fmt.Errorf("%s is not compatible with CF Dev. Please use a compatible file", depsIsoName)
+		}
+
 		depsToDownload = resource.Catalog{}
 		for _, item := range s.Config.Dependencies.Items {
 			if item.Name != "cf-deps.iso" {
@@ -73,6 +96,16 @@ func (s *Start) Execute(args Args) error {
 			}
 		}
 	}
+
+	services, message, isCompatible, err := readIsoAndVerifyVersion(depsIsoPath)
+	if err != nil {
+		return errors.SafeWrap(err, "Incompatible iso specified")
+	}
+
+	if !isCompatible {
+		return fmt.Errorf("%s is not a compatible iso file", depsIsoName)
+	}
+
 	s.AnalyticsToggle.SetProp("type", depsIsoName)
 	s.Analytics.Event(cfanalytics.START_BEGIN)
 
@@ -142,10 +175,10 @@ func (s *Start) Execute(args Args) error {
 		return errors.SafeWrap(err, "Failed to deploy the Cloud Foundry")
 	}
 
-	services, message, err := s.GardenClient.GetServices()
-	if err != nil {
-		return errors.SafeWrap(err, "Failed to get list of services to deploy")
-	}
+	//services, message, err := s.GardenClient.GetServices()
+	//if err != nil {
+	//	return errors.SafeWrap(err, "Failed to get list of services to deploy")
+	//}
 
 	err = s.GardenClient.DeployServices(s.UI, services)
 	if err != nil {
@@ -222,4 +255,54 @@ func (s *Start) parseDockerRegistriesFlag(flag string) ([]string, error) {
 		registries = append(registries, u.Host)
 	}
 	return registries, nil
+}
+
+func readIsoAndVerifyVersion(isoFile string) ([]garden.Service, string, bool, error) {
+
+	file, err := os.Open(isoFile)
+	if err != nil {
+		return nil, "", false, err
+	}
+
+	r, err := iso9660.NewReader(file)
+	if err != nil {
+		return nil, "", false, err
+	}
+
+	for {
+		f, err := r.Next()
+		if err == io.EOF {
+			fmt.Println("File not found")
+			return nil, "", false, err
+		}
+
+		if err != nil {
+			return nil, "", false, err
+		}
+
+		if strings.Contains(f.Name(), "metadata.yml") {
+			buf, err := ioutil.ReadAll(f.Sys().(io.Reader))
+			if err != nil {
+				return nil, "", false, err
+			}
+
+			metadata := struct {
+				Version  string           `yaml:"compatibility_version"`
+				Message  string           `yaml:"splash_message"`
+				Services []garden.Service `yaml:"services"`
+			}{}
+
+			err = yaml.Unmarshal(buf, &metadata)
+			if err != nil {
+				return nil, "", false, err
+			}
+
+			if metadata.Version != compatibilityVersion {
+				return nil, "", false, nil
+			}
+
+			return metadata.Services, metadata.Message, true, nil
+		}
+	}
+	return nil, "", false, nil
 }
