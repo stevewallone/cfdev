@@ -4,10 +4,11 @@ package cmd
 
 import (
 	"net"
+
 	"code.cloudfoundry.org/cfdev/launchd"
 )
 
-//go:generate mockgen -package mocks -destination mocks/launchd.go code.cloudfoundry.org/cfdevd/cmd Launchd
+//go:generate mockgen -package mocks -destination mocks/launchd.go code.cloudfoundry.org/cfdev/cfdevd/cmd Launchd
 type Launchd interface {
 	RemoveDaemon(spec launchd.DaemonSpec) error
 }

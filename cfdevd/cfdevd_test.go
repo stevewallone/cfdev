@@ -34,7 +34,7 @@ var _ = Describe("cfdevd test", func() {
 		Expect(string(session.Out.Contents())).Should(ContainSubstring("10.245.0.2"))
 		Expect(string(session.Out.Contents())).Should(ContainSubstring("10.144.0.34"))
 
-		bin, err = gexec.Build("code.cloudfoundry.org/cfdevd")
+		bin, err = gexec.Build("cfdevd/cfdevd")
 		Expect(err).NotTo(HaveOccurred())
 		session, err = gexec.Start(exec.Command("sudo", "--non-interactive", bin, "install"), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())

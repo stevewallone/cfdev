@@ -1,19 +1,17 @@
 #!/usr/bin/env bash
 set -exo pipefail
 
-cfdev="/Users/pivotal/workspace/cfdev"
-dir="$( cd "$( dirname "$0" )" && pwd )"
-cfdev="$dir"/../../..
+cfdev="$( cd "$( dirname "$0" )" && pwd )"
 cache_dir="$HOME"/.cfdev/cache
 
-export GOPATH="$cfdev"
 pkg="code.cloudfoundry.org/cfdev/config"
 
 export GOOS=darwin
 export GOARCH=amd64
 
-go build code.cloudfoundry.org/cfdevd
-cfdevd="$PWD"/cfdevd
+mkdir -p "$cfdev"/output/
+cfdevd="$cfdev"/output/cfdevd
+go build -o "$cfdevd" code.cloudfoundry.org/cfdev/cfdevd
 
 cfdepsUrl="$cfdev/output/cf-deps.iso"
 if [ ! -f "$cfdepsUrl" ]; then

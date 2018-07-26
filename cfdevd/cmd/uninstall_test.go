@@ -9,12 +9,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"code.cloudfoundry.org/cfdevd/cmd"
-	"code.cloudfoundry.org/cfdevd/cmd/mocks"
+	"code.cloudfoundry.org/cfdev/cfdevd/cmd"
+	"code.cloudfoundry.org/cfdev/cfdevd/cmd/mocks"
+	"code.cloudfoundry.org/cfdev/launchd"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/cfdev/launchd"
 )
 
 var _ bool = Describe("UninstallCommand", func() {
