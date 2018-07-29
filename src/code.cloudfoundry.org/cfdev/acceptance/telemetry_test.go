@@ -56,7 +56,7 @@ var _ = Describe("hyperkit starts and telemetry", func() {
 
 		Eventually(func() ([]byte, error) {
 			return ioutil.ReadFile(filepath.Join(cfdevHome, "analytics", "analytics.txt"))
-		}, 10, 1).Should(MatchJSON(`{"enabled":false, "props":{"type":"cf"}}`))
+		}, 30, 1).Should(MatchJSON(`{"enabled":false, "props":{"type":"cf"}}`))
 
 	})
 
