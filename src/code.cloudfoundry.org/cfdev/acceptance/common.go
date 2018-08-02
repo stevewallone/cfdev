@@ -21,6 +21,7 @@ import (
 	"runtime"
 
 	. "github.com/onsi/gomega"
+	"time"
 )
 
 const (
@@ -81,13 +82,13 @@ func EventuallyShouldListenAt(url string, timeoutSec int) {
 
 func HttpServerIsListeningAt(url string) error {
 	client := http.Client{
+		Timeout: 5*time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
 		},
 	}
-
 	resp, err := client.Get(url)
 
 	if resp != nil {

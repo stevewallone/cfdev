@@ -23,12 +23,15 @@ import (
 	"code.cloudfoundry.org/garden/client/connection"
 	"github.com/cloudfoundry-incubator/cf-test-helpers/cf"
 	"github.com/onsi/gomega/gbytes"
+	"math/rand"
 )
 
 var _ = Describe("cfdev lifecycle", func() {
 
 	var (
-		startSession *gexec.Session
+		startSession  *gexec.Session
+		logsSession   *gexec.Session
+		tinyProxyName string
 	)
 	BeforeEach(func() {
 		pluginPath = os.Getenv("CFDEV_PLUGIN_PATH")
@@ -46,6 +49,8 @@ var _ = Describe("cfdev lifecycle", func() {
 		fmt.Println("PLUGIN PATH: " + pluginPath)
 		session := cf.Cf("install-plugin", pluginPath, "-f")
 		Eventually(session).Should(gexec.Exit(0))
+
+		rand.Seed(time.Now().UTC().UnixNano())
 	})
 
 	AfterEach(func() {
@@ -55,6 +60,21 @@ var _ = Describe("cfdev lifecycle", func() {
 
 	Context("starting the default cf dev file", func() {
 		BeforeEach(func() {
+			By("configuring a proxy")
+			tinyProxyName = randomContainerName()
+
+			proxyCmd := exec.Command("docker", "run", "-d", "--rm", "-p", "8282:8888", "--name", tinyProxyName, "dtgilles/tinyproxy")
+			session, err := gexec.Start(proxyCmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(session, 10*time.Second).Should(gexec.Exit(0))
+
+			proxywriter := gexec.NewPrefixedWriter("[tinyproxy] ", GinkgoWriter)
+			logsSession, err = gexec.Start(exec.Command("docker", "exec", "-t", tinyProxyName, "tail", "-f", "/logs/tinyproxy.log"), proxywriter, proxywriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			os.Setenv("HTTP_PROXY", "localhost:8282")
+
+			By("starting cfdev")
 			isoPath := os.Getenv("ISO_PATH")
 			if isoPath != "" {
 				startSession = cf.Cf("dev", "start", "-f", isoPath, "-m", "8192")
@@ -97,6 +117,10 @@ var _ = Describe("cfdev lifecycle", func() {
 
 			gexec.KillAndWait()
 			RemoveIPAliases(BoshDirectorIP, CFRouterIP)
+			os.Unsetenv("HTTP_PROXY")
+
+			Eventually(gexec.Start(exec.Command("docker", "stop", tinyProxyName), GinkgoWriter, GinkgoWriter)).Should(gexec.Exit(0))
+			Eventually(gexec.Start(exec.Command("docker", "rm", tinyProxyName), GinkgoWriter, GinkgoWriter)).Should(gexec.Exit(0))
 		})
 
 		It("runs the entire vm lifecycle", func() {
@@ -123,6 +147,9 @@ var _ = Describe("cfdev lifecycle", func() {
 
 			By("pushing an app")
 			PushAnApp()
+
+			By("testing that vpnkit respected proxy settings")
+			Eventually(logsSession.Out).Should(gbytes.Say(`Established connection to host "example.com"`))
 		})
 	})
 })
@@ -143,7 +170,7 @@ func EventuallyWeCanTargetTheBOSHDirector() {
 		boshEnv := func() *gexec.Session {
 			boshCmd := exec.Command("/bin/sh",
 				"-e",
-				"-c", fmt.Sprintf(`eval "$(cf dev bosh env)" && bosh env`))
+				"-c", fmt.Sprintf(`eval "$(cf dev bosh env)" && HTTP_PROXY="" bosh env`))
 
 			session, err := gexec.Start(boshCmd, w, w)
 			Expect(err).ToNot(HaveOccurred())
@@ -247,4 +274,14 @@ func doesVMExist() bool {
 	}
 
 	return string(output) == "cfdev"
+}
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randomContainerName() string {
+	b := make([]rune, 10)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return "tiny" + string(b)
 }
