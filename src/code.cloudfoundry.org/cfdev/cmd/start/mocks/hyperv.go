@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	process "code.cloudfoundry.org/cfdev/process"
 	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
 )
@@ -33,7 +34,7 @@ func (m *MockHyperV) EXPECT() *MockHyperVMockRecorder {
 }
 
 // CreateVM mocks base method
-func (m *MockHyperV) CreateVM(arg0 string) error {
+func (m *MockHyperV) CreateVM(arg0 process.VM) error {
 	ret := m.ctrl.Call(m, "CreateVM", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0

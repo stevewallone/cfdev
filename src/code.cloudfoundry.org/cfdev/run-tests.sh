@@ -21,6 +21,6 @@ cd "$script_dir"
 
 ginkgo -r -skipPackage privileged "$@"
 
-pushd acceptance/privileged > /dev/null
-   ginkgo -v "$@"
-popd > /dev/null
+#pushd acceptance/privileged > /dev/null
+#   ginkgo -v "$@"
+#popd > /dev/null
