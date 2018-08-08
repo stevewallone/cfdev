@@ -188,12 +188,8 @@ func (s *Start) Execute(args Args) error {
 		return nil
 	}
 
-	if err := env.Setup(s.Config); err != nil {
-		return errors.SafeWrap(err, "environment setup")
-	}
-
-	if err := cleanupStateDir(s.Config); err != nil {
-		return errors.SafeWrap(err, "cleaning state directory")
+	if err := env.SetupHomeDir(s.Config); err != nil {
+		return errors.SafeWrap(err, "setting up cfdev home dir")
 	}
 
 	if err := s.HostNet.AddLoopbackAliases(s.Config.BoshDirectorIP, s.Config.CFRouterIP); err != nil {
@@ -310,17 +306,4 @@ func (s *Start) parseDockerRegistriesFlag(flag string) ([]string, error) {
 		registries = append(registries, u.Host)
 	}
 	return registries, nil
-}
-
-func cleanupStateDir(cfg config.Config) error {
-	for _, dir := range []string{cfg.StateDir, cfg.VpnKitStateDir} {
-		if err := os.RemoveAll(dir); err != nil {
-			return errors.SafeWrap(err, "Unable to clean up .cfdev state directory")
-		}
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			return errors.SafeWrap(err, "Unable to create .cfdev state directory")
-		}
-	}
-
-	return nil
 }
