@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"code.cloudfoundry.org/cfdev/config"
 	"code.cloudfoundry.org/cfdev/errors"
 
 	"encoding/json"
@@ -19,13 +18,8 @@ import (
 
 const retries = 5
 
-type VpnKit struct {
-	Config  config.Config
-	DaemonRunner DaemonRunner
-}
-
 func (v *VpnKit) Start() error {
-	if err := v.setupVPNKit(); err != nil {
+	if err := v.setup(); err != nil {
 		return errors.SafeWrap(err, "Failed to setup VPNKit")
 	}
 	if err := v.DaemonRunner.AddDaemon(v.daemonSpec()); err != nil {
@@ -85,7 +79,7 @@ func (v *VpnKit) daemonSpec() daemon.DaemonSpec {
 	}
 }
 
-func (v *VpnKit) setupVPNKit() error {
+func (v *VpnKit) setup() error {
 	httpProxyPath := filepath.Join(v.Config.VpnKitStateDir, "http_proxy.json")
 
 	proxyConfig := env.BuildProxyConfig(v.Config.BoshDirectorIP, v.Config.CFRouterIP)

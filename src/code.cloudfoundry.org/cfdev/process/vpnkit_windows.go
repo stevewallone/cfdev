@@ -1,95 +1,21 @@
 package process
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 
-	"code.cloudfoundry.org/cfdev/config"
 	"code.cloudfoundry.org/cfdev/daemon"
 	"code.cloudfoundry.org/cfdev/errors"
 )
 
-type VpnKit struct {
-	Config  config.Config
-	DaemonRunner DaemonRunner
-}
 
-func (v *VpnKit) Setup() error {
-	err := v.generateServiceGUIDs()
-	if err != nil {
-		return fmt.Errorf("generating service guids: %s", err)
-	}
-
-	dns, err := exec.Command("powershell.exe", "-Command", "get-dnsclientserveraddress -family ipv4 | select-object -expandproperty serveraddresses").Output()
-	if err != nil {
-		return fmt.Errorf("getting dns client server addresses: %s", err)
-	}
-
-	dnsFile := ""
-	scanner := bufio.NewScanner(bytes.NewReader(dns))
-	for scanner.Scan() {
-		line := scanner.Text()
-		dnsFile += fmt.Sprintf("nameserver %s\r\n", line)
-	}
-
-	resolvConfPath := filepath.Join(v.Config.CFDevHome, "resolv.conf")
-	if fileExists(resolvConfPath) {
-		os.RemoveAll(resolvConfPath)
-	}
-
-	err = ioutil.WriteFile(resolvConfPath, []byte(dnsFile), 0600)
-	if err != nil {
-		return fmt.Errorf("writing resolv.conf: %s", err)
-	}
-
-	cmd := exec.Command("powershell.exe", "-Command", "get-dnsclient | select-object -expandproperty connectionspecificsuffix")
-	dhcp, err := cmd.Output()
-	if err != nil {
-		return fmt.Errorf("get dns client: %s", err)
-	}
-
-	cmd.Wait()
-
-	var output struct {
-		SearchDomains []string `json:"searchDomains"`
-		DomainName    string   `json:"domainName"`
-	}
-
-	scanner = bufio.NewScanner(bytes.NewReader(dhcp))
-	for scanner.Scan() {
-		if line := scanner.Text(); strings.TrimSpace(line) != "" {
-			output.SearchDomains = append(output.SearchDomains, line)
-		}
-
-		if len(output.SearchDomains) > 0 {
-			output.DomainName = output.SearchDomains[len(output.SearchDomains)-1]
-		}
-	}
-
-	dhcpJsonPath := filepath.Join(v.Config.CFDevHome, "dhcp.json")
-	if fileExists(dhcpJsonPath) {
-		os.RemoveAll(dhcpJsonPath)
-	}
-
-	file, err := os.Create(dhcpJsonPath)
-	if err != nil {
-		return fmt.Errorf("creating dhcp.json: %s", err)
-	}
-	defer file.Close()
-
-	return json.NewEncoder(file).Encode(&output)
-}
 
 func (v *VpnKit) Start() error {
-	if err := v.Setup(); err != nil {
+	if err := v.setup(); err != nil {
 		return errors.SafeWrap(err, "Failed to setup VPNKit")
 	}
 
@@ -192,4 +118,70 @@ func fileExists(path string) bool {
 	}
 
 	return false
+}
+
+func (v *VpnKit) setup() error {
+	err := v.generateServiceGUIDs()
+	if err != nil {
+		return fmt.Errorf("generating service guids: %s", err)
+	}
+
+	dns, err := exec.Command("powershell.exe", "-Command", "get-dnsclientserveraddress -family ipv4 | select-object -expandproperty serveraddresses").Output()
+	if err != nil {
+		return fmt.Errorf("getting dns client server addresses: %s", err)
+	}
+
+	dnsFile := ""
+	scanner := bufio.NewScanner(bytes.NewReader(dns))
+	for scanner.Scan() {
+		line := scanner.Text()
+		dnsFile += fmt.Sprintf("nameserver %s\r\n", line)
+	}
+
+	resolvConfPath := filepath.Join(v.Config.CFDevHome, "resolv.conf")
+	if fileExists(resolvConfPath) {
+		os.RemoveAll(resolvConfPath)
+	}
+
+	err = ioutil.WriteFile(resolvConfPath, []byte(dnsFile), 0600)
+	if err != nil {
+		return fmt.Errorf("writing resolv.conf: %s", err)
+	}
+
+	cmd := exec.Command("powershell.exe", "-Command", "get-dnsclient | select-object -expandproperty connectionspecificsuffix")
+	dhcp, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("get dns client: %s", err)
+	}
+
+	cmd.Wait()
+
+	var output struct {
+		SearchDomains []string `json:"searchDomains"`
+		DomainName    string   `json:"domainName"`
+	}
+
+	scanner = bufio.NewScanner(bytes.NewReader(dhcp))
+	for scanner.Scan() {
+		if line := scanner.Text(); strings.TrimSpace(line) != "" {
+			output.SearchDomains = append(output.SearchDomains, line)
+		}
+
+		if len(output.SearchDomains) > 0 {
+			output.DomainName = output.SearchDomains[len(output.SearchDomains)-1]
+		}
+	}
+
+	dhcpJsonPath := filepath.Join(v.Config.CFDevHome, "dhcp.json")
+	if fileExists(dhcpJsonPath) {
+		os.RemoveAll(dhcpJsonPath)
+	}
+
+	file, err := os.Create(dhcpJsonPath)
+	if err != nil {
+		return fmt.Errorf("creating dhcp.json: %s", err)
+	}
+	defer file.Close()
+
+	return json.NewEncoder(file).Encode(&output)
 }
