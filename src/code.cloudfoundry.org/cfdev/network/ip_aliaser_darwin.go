@@ -15,7 +15,6 @@ func (h *HostNet) RemoveLoopbackAliases(addrs ...string) error {
 
 func (h *HostNet) AddLoopbackAliases(addrs ...string) error {
 	fmt.Println("Setting up IP aliases for the BOSH Director & CF Router (requires administrator privileges)")
-	fmt.Println("hostnet_darwin was called")
 	_, err := h.CfdevdClient.AddIPAlias()
 	if err != nil {
 		return err

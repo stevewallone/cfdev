@@ -13,7 +13,6 @@ import (
 
 	"code.cloudfoundry.org/cfdevd/cmd"
 	"code.cloudfoundry.org/cfdev/daemon"
-	"io/ioutil"
 )
 
 const SockName = "ListenSocket"
@@ -23,8 +22,6 @@ func handleRequest(conn *net.UnixConn) {
 		fmt.Println("Handshake Error: ", err)
 		return
 	}
-
-	ioutil.WriteFile("/tmp/mylogHandleRequest", []byte(""), 0777)
 
 	command, err := cmd.UnmarshalCommand(conn)
 	if err != nil {
@@ -107,12 +104,11 @@ func run() {
 	listeners, err := daemon.Listeners(SockName)
 	if err != nil || len(listeners) != 1 {
 		log.Fatal("Failed to obtain socket from launchd")
-		ioutil.WriteFile("/tmp/mylogFailedToObtainSocketLaunchd", []byte(""), 0777)
 	}
 	listener, ok := listeners[0].(*net.UnixListener)
 	if !ok {
 		log.Fatal("Failed to cast listener to unix listener")
-		ioutil.WriteFile("/tmp/mylogFailedToCastListenerUnixListener", []byte(""), 0777)
+
 	}
 	for {
 		conn, err := listener.AcceptUnix()

@@ -6,7 +6,6 @@ import (
 	"net"
 	"strings"
 	"code.cloudfoundry.org/cfdev/errors"
-	"io/ioutil"
 )
 
 type Client struct {
@@ -57,7 +56,6 @@ func (c *Client) Send(command uint8) (string, error) {
 
 func (c *Client) Uninstall() (string, error) {
 
-	ioutil.WriteFile("/tmp/mylogSendingToUninstall", []byte(""), 0777)
 
 	name, err := c.Send(1)
 	if err != nil && (strings.HasPrefix(err.Error(), eofReadingExitCodeMsg) || strings.HasPrefix(err.Error(), connectCfdevdMsg)) {
@@ -68,7 +66,6 @@ func (c *Client) Uninstall() (string, error) {
 
 func (c *Client) RemoveIPAlias() (string, error) {
 
-	ioutil.WriteFile("/tmp/mylog4", []byte(""), 0777)
 
 	name, err := c.Send(2)
 	if err != nil && (strings.HasPrefix(err.Error(), eofReadingExitCodeMsg) || strings.HasPrefix(err.Error(), connectCfdevdMsg)) {
@@ -79,7 +76,6 @@ func (c *Client) RemoveIPAlias() (string, error) {
 
 func (c *Client) AddIPAlias() (string, error) {
 
-	ioutil.WriteFile("/tmp/mylog0", []byte(""), 0777)
 
 	name, err := c.Send(3)
 	//if err != nil && (strings.HasPrefix(err.Error(), eofReadingExitCodeMsg) || strings.HasPrefix(err.Error(), connectCfdevdMsg)) {
@@ -88,7 +84,6 @@ func (c *Client) AddIPAlias() (string, error) {
 
 	if err != nil && (strings.HasPrefix(err.Error(), eofReadingExitCodeMsg) || strings.HasPrefix(err.Error(), connectCfdevdMsg)) {
 
-		ioutil.WriteFile("mylog_RECIEVED_ERROR", []byte(""), 0777)
 
 		return name, nil
 	}

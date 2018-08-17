@@ -3,7 +3,6 @@ package cmd
 import (
 	"net"
 	"code.cloudfoundry.org/cfdevd/networkd"
-	"io/ioutil"
 )
 
 type AddIPAliasCommand struct {
@@ -11,7 +10,6 @@ type AddIPAliasCommand struct {
 
 func (u *AddIPAliasCommand) Execute(conn *net.UnixConn) error {
 
-	ioutil.WriteFile("/tmp/mylog3", []byte(""), 0777)
 
 	hostNet := &networkd.HostNetD{}
 
