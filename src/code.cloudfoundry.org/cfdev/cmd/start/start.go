@@ -188,7 +188,11 @@ func (s *Start) Execute(args Args) error {
 		return errors.SafeWrap(err, "setting up cfdev home dir")
 	}
 
-	if err := s.HostNet.AddLoopbackAliases(s.Config.BoshDirectorIP, s.Config.CFRouterIP); err != nil {
+	if err := s.osSpecificSetup(); err != nil {
+		return err
+	}
+
+    if err := s.HostNet.AddLoopbackAliases(s.Config.BoshDirectorIP, s.Config.CFRouterIP); err != nil {
 		return errors.SafeWrap(err, "adding aliases")
 	}
 
@@ -216,10 +220,6 @@ func (s *Start) Execute(args Args) error {
 		} else {
 			args.Mem = defaultMemory
 		}
-	}
-
-	if err := s.osSpecificSetup(); err != nil {
-		return err
 	}
 
 	s.UI.Say("Creating the VM...")
