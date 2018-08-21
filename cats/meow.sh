@@ -43,8 +43,8 @@ function run_cats() {
   }
 EOF
 
-  pushd $script_dir/src/github.com/cloudfoundry/cf-acceptance-tests >/dev/null
-    GOPATH=$script_dir ./bin/test -slowSpecThreshold=1200 --flakeAttempts=3 ${@:2} .
+  pushd $GOPATH/src/github.com/cloudfoundry/cf-acceptance-tests >/dev/null
+    ./bin/test -slowSpecThreshold=1200 --flakeAttempts=3 ${@:2} .
   popd >/dev/null
 
 }
