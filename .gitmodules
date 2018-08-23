@@ -88,3 +88,6 @@
 [submodule "src/github.com/c4milo/gotoolkit"]
 	path = src/github.com/c4milo/gotoolkit
 	url = https://github.com/c4milo/gotoolkit.git
+[submodule "src/golang.org/x/oauth2"]
+	path = src/golang.org/x/oauth2
+	url = https://github.com/golang/oauth2.git
