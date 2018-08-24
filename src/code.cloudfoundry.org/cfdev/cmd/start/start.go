@@ -70,6 +70,13 @@ type VpnKit interface {
 	Watch(chan string)
 }
 
+//go:generate mockgen -package mocks -destination mocks/analyticsd.go code.cloudfoundry.org/cfdev/cmd/start AnalyticsD
+type AnalyticsD interface {
+	Start() error
+	Stop() error
+	IsRunning() (bool, error)
+}
+
 //go:generate mockgen -package mocks -destination mocks/hypervisor.go code.cloudfoundry.org/cfdev/cmd/start Hypervisor
 type Hypervisor interface {
 	CreateVM(vm hypervisor.VM) error
@@ -114,6 +121,7 @@ type Start struct {
 	Cache           Cache
 	CFDevD          CFDevD
 	VpnKit          VpnKit
+	AnalyticsD      AnalyticsD
 	Hypervisor      Hypervisor
 	Provisioner     Provisioner
 }
@@ -266,6 +274,8 @@ func (s *Start) Execute(args Args) error {
 	if err := s.provision(isoConfig, registries); err != nil {
 		return err
 	}
+
+	err = s.AnalyticsD.Start()
 
 	s.Analytics.Event(cfanalytics.START_END)
 

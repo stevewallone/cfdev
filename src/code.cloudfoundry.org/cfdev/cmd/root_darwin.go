@@ -28,6 +28,7 @@ import (
 	cfdevdClient "code.cloudfoundry.org/cfdevd/client"
 	"github.com/spf13/cobra"
 	"code.cloudfoundry.org/cfdev/host"
+	"code.cloudfoundry.org/cfdev/cfanalytics"
 )
 
 type UI interface {
@@ -71,6 +72,10 @@ func NewRoot(exit chan struct{}, ui UI, config config.Config, analyticsClient An
 	}
 	linuxkit := &hypervisor.LinuxKit{Config: config, DaemonRunner: lctl}
 	vpnkit := &network.VpnKit{Config: config, DaemonRunner: lctl}
+	analyticsD := &cfanalytics.AnalyticsD{
+		Config: config,
+		DaemonRunner: lctl,
+	}
 
 	dev := &cobra.Command{
 		Use:           "dev",
@@ -114,6 +119,7 @@ func NewRoot(exit chan struct{}, ui UI, config config.Config, analyticsClient An
 			Host:        &host.Host{},
 			CFDevD:      &network.CFDevD{ExecutablePath: filepath.Join(config.CacheDir, "cfdevd")},
 			VpnKit:      vpnkit,
+			AnalyticsD:  analyticsD,
 			Hypervisor:  linuxkit,
 			Provisioner: provision.NewController(),
 			IsoReader:   iso.New(),

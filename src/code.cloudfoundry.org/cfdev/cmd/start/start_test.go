@@ -33,6 +33,7 @@ var _ = Describe("Start", func() {
 		mockCache           *mocks.MockCache
 		mockCFDevD          *mocks.MockCFDevD
 		mockVpnKit          *mocks.MockVpnKit
+		mockAnalyticsD      *mocks.MockAnalyticsD
 		mockHypervisor      *mocks.MockHypervisor
 		mockProvisioner     *mocks.MockProvisioner
 		mockIsoReader       *mocks.MockIsoReader
@@ -57,6 +58,7 @@ var _ = Describe("Start", func() {
 		mockCache = mocks.NewMockCache(mockController)
 		mockCFDevD = mocks.NewMockCFDevD(mockController)
 		mockVpnKit = mocks.NewMockVpnKit(mockController)
+		mockAnalyticsD = mocks.NewMockAnalyticsD(mockController)
 		mockHypervisor = mocks.NewMockHypervisor(mockController)
 		mockProvisioner = mocks.NewMockProvisioner(mockController)
 		mockIsoReader = mocks.NewMockIsoReader(mockController)
@@ -91,6 +93,7 @@ var _ = Describe("Start", func() {
 			Cache:           mockCache,
 			CFDevD:          mockCFDevD,
 			VpnKit:          mockVpnKit,
+			AnalyticsD:      mockAnalyticsD,
 			Hypervisor:      mockHypervisor,
 			Provisioner:     mockProvisioner,
 			IsoReader:       mockIsoReader,
@@ -181,6 +184,7 @@ var _ = Describe("Start", func() {
 					}),
 
 					//welcome message
+					mockAnalyticsD.EXPECT().Start(),
 					mockAnalyticsClient.EXPECT().Event(cfanalytics.START_END),
 				)
 
@@ -261,6 +265,7 @@ var _ = Describe("Start", func() {
 						}),
 
 						//welcome message
+						mockAnalyticsD.EXPECT().Start(),
 						mockAnalyticsClient.EXPECT().Event(cfanalytics.START_END),
 					)
 
@@ -331,7 +336,9 @@ var _ = Describe("Start", func() {
 						}),
 
 						//welcome message
+						mockAnalyticsD.EXPECT().Start(),
 						mockAnalyticsClient.EXPECT().Event(cfanalytics.START_END),
+
 					)
 
 					Expect(startCmd.Execute(start.Args{
@@ -495,6 +502,7 @@ var _ = Describe("Start", func() {
 					}),
 
 					//welcome message
+					mockAnalyticsD.EXPECT().Start(),
 					mockAnalyticsClient.EXPECT().Event(cfanalytics.START_END),
 				)
 

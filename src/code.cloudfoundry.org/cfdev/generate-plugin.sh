@@ -15,6 +15,9 @@ export GOARCH=amd64
 go build code.cloudfoundry.org/cfdevd
 cfdevd="$PWD"/cfdevd
 
+go build code.cloudfoundry.org/analyticsd
+analyticsd="$PWD"/analyticsd
+
 cfdepsUrl="$cfdev/output/cf-deps.iso"
 if [ ! -f "$cfdepsUrl" ]; then
   cfdepsUrl="$cache_dir/cf-deps.iso"
@@ -57,6 +60,10 @@ go build \
      -X $pkg.cfdevdUrl=file://$cfdevd
      -X $pkg.cfdevdMd5=$(md5 "$cfdevd" | awk '{ print $4 }')
      -X $pkg.cfdevdSize=$(wc -c < "$cfdevd" | tr -d '[:space:]')
+
+     -X $pkg.analyticsdUrl=file://$analyticsd
+     -X $pkg.analyticsdMd5=$(md5 "$analyticsd" | awk '{ print $4 }')
+     -X $pkg.analyticsdSize=$(wc -c < "$analyticsd" | tr -d '[:space:]')
 
      -X $pkg.cliVersion=0.0.$(date +%Y%m%d-%H%M%S)
      -X $pkg.analyticsKey=WFz4dVFXZUxN2Y6MzfUHJNWtlgXuOYV2" \

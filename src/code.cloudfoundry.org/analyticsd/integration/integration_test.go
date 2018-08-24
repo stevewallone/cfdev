@@ -118,6 +118,24 @@ var _ = Describe("Integration", func() {
 		})
 	})
 
+	Describe("successive metrics", func() {
+		BeforeEach(func() {
+			ccServer.AppendHandlers(
+				ghttp.CombineHandlers(
+					ghttp.VerifyRequest(http.MethodGet, "/v2/events","q=type%20IN%20audit.app.create"),
+					ghttp.RespondWith(http.StatusOK, fixtureSequentialResponse1+2),
+				),
+			)
+		})
+
+		It("are filtered out because of constantly retrieving newer records by one second", func() {
+			mockAnalytics.EXPECT().Enqueue(gomock.Any()).Times(2)
+
+			startDaemon()
+			<-time.After(2500 * time.Millisecond)
+		})
+	})
+
 	Describe("requests to Cloud Controller gives a non successful status code", func() {
 		BeforeEach(func() {
 			ccServer.AppendHandlers(ghttp.CombineHandlers(
