@@ -275,7 +275,9 @@ func (s *Start) Execute(args Args) error {
 		return err
 	}
 
-	err = s.AnalyticsD.Start()
+	if s.AnalyticsToggle.Get() {
+		err = s.AnalyticsD.Start()
+	}
 
 	s.Analytics.Event(cfanalytics.START_END)
 

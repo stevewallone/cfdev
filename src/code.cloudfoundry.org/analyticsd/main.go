@@ -21,8 +21,8 @@ func main() {
 	)
 
 	cfg := &clientcredentials.Config{
-		ClientID:     "",
-		ClientSecret: "",
+		ClientID:     "cfdev_analytics",
+		ClientSecret: "cfdev_analytics_secret",
 		TokenURL:     "https://uaa.dev.cfdev.sh/oauth/token",
 	}
 
