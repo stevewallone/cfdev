@@ -86,16 +86,22 @@ func (c *Cache) download(item *Item) error {
 	if err := retry.Retry(downloadFn, retry.Retryable(10, c.RetryWait, c.Writer)); err != nil {
 		return err
 	}
+
+
 	if m, err := MD5(tmpPath); err != nil {
 		return err
 	} else if m != item.MD5 {
 		os.Remove(tmpPath)
 		return errors.SafeWrap(fmt.Errorf("%s: %s != %s", item.Name, m, item.MD5), "md5 did not match")
 	}
+
+
 	return os.Rename(tmpPath, filepath.Join(c.Dir, item.Name))
 }
 
 func (c *Cache) downloadHTTP(url, tmpPath string) error {
+
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
