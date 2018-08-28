@@ -5,6 +5,9 @@ cfdev="/Users/pivotal/workspace/cfdev"
 dir="$( cd "$( dirname "$0" )" && pwd )"
 cfdev="$dir"/../../..
 cache_dir="$HOME"/.cfdev/cache
+analyticskey="WFz4dVFXZUxN2Y6MzfUHJNWtlgXuOYV2"
+clientsecret="cfdev_analytics_secret"
+tokenUrl="https://uaa.dev.cfdev.sh/oauth/token"
 
 export GOPATH="$cfdev"
 pkg="code.cloudfoundry.org/cfdev/config"
@@ -15,7 +18,15 @@ export GOARCH=amd64
 go build code.cloudfoundry.org/cfdevd
 cfdevd="$PWD"/cfdevd
 
-go build code.cloudfoundry.org/analyticsd
+analyticsdpkg="code.cloudfoundry.org/analyticsd/main"
+go build \
+  -ldflags \
+    "-X $analyticsdpkg.analyticsKey=$analyticskey \
+     -X $analyticsdpkg.userID= \
+     -X $analyticsdpkg.clientSecret=$clientsecret \
+     -X $analyticsdpkg.tokenUrl=$tokenUrl" \
+     code.cloudfoundry.org/analyticsd
+
 analyticsd="$PWD"/analyticsd
 
 cfdepsUrl="$cfdev/output/cf-deps.iso"
@@ -66,7 +77,7 @@ go build \
      -X $pkg.analyticsdSize=$(wc -c < "$analyticsd" | tr -d '[:space:]')
 
      -X $pkg.cliVersion=0.0.$(date +%Y%m%d-%H%M%S)
-     -X $pkg.analyticsKey=WFz4dVFXZUxN2Y6MzfUHJNWtlgXuOYV2" \
+     -X $pkg.analyticsKey=$analyticskey" \
      code.cloudfoundry.org/cfdev
 
 

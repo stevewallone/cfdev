@@ -12,18 +12,21 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"github.com/denisbrodbeck/machineid"
 )
 
 func main() {
 	var (
-		analyticsKey = os.Getenv("ANALYTICSD_API_KEY")
-		userID       = os.Getenv("ANALYTICSD_USER_ID")
+		analyticsKey string
+		userID string
+		clientSecret string
+		tokenUrl string
 	)
 
 	cfg := &clientcredentials.Config{
 		ClientID:     "cfdev_analytics",
-		ClientSecret: "cfdev_analytics_secret",
-		TokenURL:     "https://uaa.dev.cfdev.sh/oauth/token",
+		ClientSecret: clientSecret,
+		TokenURL:     tokenUrl,
 	}
 
 	httpClient := &http.Client{
@@ -37,6 +40,11 @@ func main() {
 
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, oauth2.HTTPClient, httpClient)
+
+	userID, err := machineid.ProtectedID("cfdev")
+	if err != nil {
+		userID = "UNKNOWN_ID"
+	}
 
 	analyticsDaemon := daemon.New(
 		"https://api.dev.cfdev.sh",

@@ -139,6 +139,7 @@ func NewRoot(exit chan struct{}, ui UI, config config.Config, analyticsClient An
 		&b7.Telemetry{
 			UI:              ui,
 			AnalyticsToggle: analyticsToggle,
+			AnalyticsD:  analyticsD,
 		},
 		&b8.Logs{
 			Provisioner: provision.NewController(),
