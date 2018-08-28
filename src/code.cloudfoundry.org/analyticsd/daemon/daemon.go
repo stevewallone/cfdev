@@ -30,7 +30,7 @@ type Daemon struct {
 	doneChan        chan bool
 }
 
-func New(ccHost string, UUID string, writer io.Writer, httpClient *http.Client, analyticsClient analytics.Client, pollingInterval time.Duration) *Daemon {
+func New(ccHost string, UUID string, writer io.Writer, httpClient *http.Client, analyticsClient analytics.Client, pollingInterval time.Duration, lastTime time.Time) *Daemon {
 	return &Daemon{
 		ccHost:          ccHost,
 		UUID:            UUID,
@@ -39,7 +39,7 @@ func New(ccHost string, UUID string, writer io.Writer, httpClient *http.Client, 
 		ticker:          time.NewTicker(pollingInterval),
 		pollingInterval: pollingInterval,
 		logger:          log.New(writer, "[ANALYTICSD] ", log.LstdFlags),
-		lastTime:        time.Time{},
+		lastTime:        lastTime,
 		doneChan:        make(chan bool, 1),
 	}
 }
@@ -99,9 +99,13 @@ func (d *Daemon) do() error {
 
 	params := url.Values{}
 	params.Add("q", "type IN " + eventTypesFilter())
-	if (d.lastTime != time.Time{}) {
+
+	lastTimeIsSet := d.lastTime != time.Time{}
+
+	if lastTimeIsSet {
 		params.Add("q", "timestamp>"+d.lastTime.Format(ccTimeStampFormat))
 	}
+
 	req.URL.RawQuery = params.Encode()
 
 	resp, err := d.httpClient.Do(req)
@@ -159,12 +163,14 @@ func (d *Daemon) do() error {
 			"os":        runtime.GOOS,
 		}
 
-		err = d.analyticsClient.Enqueue(analytics.Track{
-			UserId:     d.UUID,
-			Event:      eventType,
-			Timestamp:  t,
-			Properties: properties,
-		})
+		if lastTimeIsSet {
+			err = d.analyticsClient.Enqueue(analytics.Track{
+				UserId:     d.UUID,
+				Event:      eventType,
+				Timestamp:  t,
+				Properties: properties,
+			})
+		}
 
 		if err != nil {
 			return fmt.Errorf("failed to send analytics: %v", err)

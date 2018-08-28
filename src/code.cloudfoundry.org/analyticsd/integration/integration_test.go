@@ -34,6 +34,7 @@ var _ = Describe("Integration", func() {
 		buffer = gbytes.NewBuffer()
 		httpClient = &http.Client{}
 
+		t, _ := time.Parse(time.RFC3339, "2017-08-08T08:08:08Z")
 		aDaemon = daemon.New(
 			ccServer.URL(),
 			"some-user-uuid",
@@ -41,6 +42,7 @@ var _ = Describe("Integration", func() {
 			httpClient,
 			mockAnalytics,
 			time.Second,
+			t,
 		)
 	})
 
@@ -64,7 +66,7 @@ var _ = Describe("Integration", func() {
 
 			BeforeEach(func() {
 				ccServer.AppendHandlers(ghttp.CombineHandlers(
-					ghttp.VerifyRequest(http.MethodGet, "/v2/events", "q=type%20IN%20audit.app.create"),
+					ghttp.VerifyRequest(http.MethodGet, "/v2/events", "q=type%20IN%20audit.app.create&q=timestamp>2017-08-08T08:08:08Z"),
 					ghttp.RespondWith(http.StatusOK, fixturePushApp),
 				))
 			})
@@ -100,7 +102,7 @@ var _ = Describe("Integration", func() {
 		BeforeEach(func() {
 			ccServer.AppendHandlers(
 				ghttp.CombineHandlers(
-					ghttp.VerifyRequest(http.MethodGet, "/v2/events","q=type%20IN%20audit.app.create"),
+					ghttp.VerifyRequest(http.MethodGet, "/v2/events","q=type%20IN%20audit.app.create&q=timestamp>2017-08-08T08:08:08Z"),
 					ghttp.RespondWith(http.StatusOK, fixtureSequentialResponse1),
 				),
 				ghttp.CombineHandlers(
@@ -112,6 +114,38 @@ var _ = Describe("Integration", func() {
 
 		It("are filtered out because of constantly retrieving newer records by one second", func() {
 			mockAnalytics.EXPECT().Enqueue(gomock.Any()).Times(2)
+
+			startDaemon()
+			<-time.After(2500 * time.Millisecond)
+		})
+	})
+
+	Describe("no last time set, successive metrics sent", func() {
+		BeforeEach(func() {
+			aDaemon = daemon.New(
+				ccServer.URL(),
+				"some-user-uuid",
+				buffer,
+				httpClient,
+				mockAnalytics,
+				time.Second,
+				time.Time{},
+			)
+
+			ccServer.AppendHandlers(
+				ghttp.CombineHandlers(
+					ghttp.VerifyRequest(http.MethodGet, "/v2/events","q=type%20IN%20audit.app.create"),
+					ghttp.RespondWith(http.StatusOK, fixtureSequentialResponse1),
+				),
+				ghttp.CombineHandlers(
+					ghttp.VerifyRequest(http.MethodGet, "/v2/events", "q=type%20IN%20audit.app.create&q=timestamp>2018-08-08T08:08:08Z"),
+					ghttp.RespondWith(http.StatusOK, fixtureSequentialResponse2),
+				),
+			)
+		})
+
+		It("are filtered out because of constantly retrieving newer records by one second", func() {
+			mockAnalytics.EXPECT().Enqueue(gomock.Any()).Times(1)
 
 			startDaemon()
 			<-time.After(2500 * time.Millisecond)

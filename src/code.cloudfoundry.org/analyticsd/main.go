@@ -52,7 +52,8 @@ func main() {
 		os.Stdout,
 		cfg.Client(ctx),
 		analytics.New(analyticsKey),
-		10*time.Second, //<-- TODO decide on polling interval
+		10*time.Second, //<-- TODO decide on polling interval,
+		time.Time{},
 	)
 
 	sigs := make(chan os.Signal, 1)
