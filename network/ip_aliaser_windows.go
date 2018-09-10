@@ -18,8 +18,8 @@ func (h *HostNet) RemoveLoopbackAliases(addrs ...string) error {
 		return nil
 	}
 
-	command := exec.Command("powershell.exe", "-Command", "Remove-VMSwitch -Name cfdev -force")
-	return command.Run()
+	_, err := h.Powershell.Output("Remove-VMSwitch -Name cfdev -force")
+	return err
 }
 
 func (h *HostNet) AddLoopbackAliases(addrs ...string) error {
@@ -62,17 +62,16 @@ func createInterface() error {
 	return createSwitchIfNotExist()
 }
 
-func aliasExists(alias string) (bool, error) {
-	command := exec.Command("powershell.exe", "-Command", "ipconfig")
-	output, err := command.Output()
+func (h *HostNet) aliasExists(alias string) (bool, error) {
+	output, err := h.Powershell.Output("ipconfig")
 	if err != nil {
 		return false, err
 	}
 
-	return strings.Contains(string(output), alias), nil
+	return strings.Contains(output, alias), nil
 }
 
-func createSwitchIfNotExist() error {
+func (h *HostNet) createSwitchIfNotExist() error {
 	exists, err := switchExists()
 	if err != nil {
 		return err
@@ -81,16 +80,15 @@ func createSwitchIfNotExist() error {
 		return nil
 	}
 
-	command := exec.Command("powershell.exe", "-Command", "New-VMSwitch -Name cfdev -SwitchType Internal -Notes 'Switch for CF Dev Networking'")
-	return command.Run()
+	_, err = h.Powershell.Output("New-VMSwitch -Name cfdev -SwitchType Internal -Notes 'Switch for CF Dev Networking'")
+	return err
 }
 
-func switchExists() (bool, error) {
-	command := exec.Command("powershell.exe", "-Command", "Get-VMSwitch cfdev*")
-	output, err := command.Output()
+func (h *HostNet) switchExists() (bool, error) {
+	output, err := h.Powershell.Output("Get-VMSwitch cfdev*")
 	if err != nil {
 		return false, err
-	} else if string(output) == "" {
+	} else if output == "" {
 		return false, nil
 	}
 
