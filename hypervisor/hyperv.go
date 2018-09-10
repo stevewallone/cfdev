@@ -4,7 +4,6 @@ import (
 	"code.cloudfoundry.org/cfdev/runner"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"strings"
@@ -53,7 +52,7 @@ func (h *HyperV) CreateVM(vm VM) error {
 		return fmt.Errorf("adding dvd drive %s: %s", vm.DepsIso, err)
 	}
 
-	command = fmt.Sprintf("(Get-VMNetworkAdapter -VMName * | Where-Object -FilterScript {$_.VMName -eq '%s'}).Name", vm.Name))
+	command = fmt.Sprintf("(Get-VMNetworkAdapter -VMName * | Where-Object -FilterScript {$_.VMName -eq '%s'}).Name", vm.Name)
 	output, err := h.Powershell.Output(command)
 	if err == nil {
 		if output != "" {
