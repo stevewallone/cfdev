@@ -193,6 +193,52 @@ var _ = Describe("Integration", func() {
 				})
 			})
 
+			Context("when there are multiple pages of results", func() {
+				It("retrieves events from all available pages", func() {
+					BeforeEach(func() {
+						ccServer.AppendHandlers(
+							ghttp.CombineHandlers(
+								ghttp.VerifyRequest(http.MethodGet, "/v2/events"),
+								ghttp.RespondWith(http.StatusOK, fakeResponse([]string{
+									fakePushEvent("2018-08-09T08:08:08Z", "ruby_buildpack"),
+								}, "/v2/events?page=2")),
+							),
+							ghttp.CombineHandlers(
+								ghttp.VerifyRequest(http.MethodGet, "/v2/events?page=2"),
+								ghttp.RespondWith(http.StatusOK, fakeResponse([]string{
+									fakePushEvent("2018-08-08T09:07:08Z", "go_buildpack"),
+								})),
+							),
+						)
+					})
+
+					mockAnalytics.EXPECT().Enqueue(analytics.Track{
+						UserId:    "some-user-uuid",
+						Event:     "app created",
+						Timestamp: time.Date(2018, 8, 9, 8, 8, 8, 0, time.UTC),
+						Properties: map[string]interface{}{
+							"buildpack": "ruby",
+							"os":        runtime.GOOS,
+							"version":   "some-version",
+						},
+					})
+
+					mockAnalytics.EXPECT().Enqueue(analytics.Track{
+						UserId:    "some-user-uuid",
+						Event:     "app created",
+						Timestamp: time.Date(2018, 8, 8, 9, 7, 8, 0, time.UTC),
+						Properties: map[string]interface{}{
+							"buildpack": "go",
+							"os":        runtime.GOOS,
+							"version":   "some-version",
+						},
+					})
+
+					startDaemon()
+					<-time.After(2030 * time.Millisecond)
+				})
+			})
+
 			Context("when events reference a non-whitelisted buildpack", func() {
 				BeforeEach(func() {
 					ccServer.AppendHandlers(ghttp.CombineHandlers(
@@ -341,10 +387,17 @@ func fakePushEvent(timestamp, buildpack string) string {
 
 var responseTemplate = `
 {
+    "next_url": %s,
 	"resources": [%s]
 }
 `
 
-func fakeResponse(events []string) string {
-	return fmt.Sprintf(responseTemplate, strings.Join(events, ","))
+func fakeResponse(events []string, args ...string) string {
+	next_url := "null"
+
+	if len(args) > 0 {
+		next_url = fmt.Sprintf(`"%s"`, args[0])
+	}
+
+	return fmt.Sprintf(responseTemplate, next_url, strings.Join(events, ","))
 }
