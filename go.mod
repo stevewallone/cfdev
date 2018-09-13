@@ -23,6 +23,7 @@ require (
 	github.com/denisbrodbeck/machineid v1.0.0
 	github.com/dustin/go-humanize v0.0.0-20180713052910-9f541cc9db5d // indirect
 	github.com/fatih/color v1.7.0 // indirect
+	github.com/go-ini/ini v1.38.2 // indirect
 	github.com/golang/mock v1.1.1
 	github.com/golang/protobuf v1.2.0 // indirect
 	github.com/hooklift/assert v0.0.0-20170704181755-9d1defd6d214 // indirect
@@ -33,6 +34,8 @@ require (
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect
 	github.com/mattn/go-runewidth v0.0.3 // indirect
+	github.com/minio/minio-go v6.0.6+incompatible
+	github.com/mitchellh/go-homedir v1.0.0 // indirect
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/onsi/ginkgo v1.6.0
 	github.com/onsi/gomega v1.4.1
