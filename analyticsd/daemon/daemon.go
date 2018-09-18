@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -43,7 +42,7 @@ var buildpackWhitelist = map[string]string{
 	"python_buildpack":      "python",
 	"php_buildpack":         "php",
 	"binary_buildpack":      "binary",
-	"": "unspecified",
+	"":                      "unspecified",
 }
 
 func New(
@@ -69,7 +68,7 @@ func New(
 }
 
 type Request struct {
-	Buildpack string
+	Buildpack       string
 	ServicePlanGUID string `json:"service_plan_guid"`
 }
 
@@ -88,7 +87,7 @@ type Resource struct {
 }
 
 type Response struct {
-	NextURL *string `json:"next_url"`
+	NextURL   *string `json:"next_url"`
 	Resources []Resource
 }
 
@@ -108,9 +107,11 @@ type ServiceEntity struct {
 	ServiceLabel string `json:"label"`
 }
 
+
+
 var (
 	eventTypes = map[string]string{
-		"audit.app.create": "app created",
+		"audit.app.create":              "app created",
 		"audit.service_instance.create": "service created",
 	}
 )
@@ -141,9 +142,9 @@ func (d *Daemon) Stop() {
 
 func (d *Daemon) do(isTimestampSet bool) error {
 	var (
-		nextURL *string = nil
+		nextURL   *string = nil
 		resources []Resource
-		fetch = func(params url.Values) error {
+		fetch     = func(params url.Values) error {
 			var appResponse Response
 			err := d.fetch("/v2/events", params, &appResponse)
 			if err != nil {
@@ -195,68 +196,10 @@ func (d *Daemon) do(isTimestampSet bool) error {
 
 		d.saveLatestTime(t)
 
-		switch eventType {
-		case "app created":
-			buildpack, ok := buildpackWhitelist[resource.Entity.Metadata.Request.Buildpack]
-			if !ok {
-				buildpack = "custom"
-			}
-			var properties = analytics.Properties{
-				"buildpack": buildpack,
-				"os":        runtime.GOOS,
-				"version":   d.version,
-			}
-
-			if isTimestampSet {
-				err = d.analyticsClient.Enqueue(analytics.Track{
-					UserId:     d.UUID,
-					Event:      eventType,
-					Timestamp:  t,
-					Properties: properties,
-				})
-			}
-
-			if err != nil {
-				return fmt.Errorf("failed to send analytics: %v", err)
-			}
-
-		case "service created":
-			var servicePlanResponse ServicePlanResponse
-			servicePlanEndpoint := "/v2/service_plans/" + resource.Entity.Metadata.Request.ServicePlanGUID
-			err := d.fetch(servicePlanEndpoint, nil, &servicePlanResponse)
-			if err != nil {
-				return err
-			}
-			serviceGUID := servicePlanResponse.ServicePlanEntity.ServicePlanGUID
-
-			var serviceResponse ServiceResponse
-			serviceEndpoint := "/v2/services/" + serviceGUID
-			err = d.fetch(serviceEndpoint, nil, &serviceResponse)
-			if err != nil {
-				return err
-			}
-			serviceType := serviceResponse.ServiceEntity.ServiceLabel
-
-			var properties = analytics.Properties{
-				"service":	serviceType,
-				"os":        runtime.GOOS,
-				"version":   d.version,
-			}
-
-			if isTimestampSet {
-				os.Mkdir("/tmp/sending-service-create", 0777)
-				err = d.analyticsClient.Enqueue(analytics.Track{
-					UserId:     d.UUID,
-					Event:      eventType,
-					Timestamp:  t,
-					Properties: properties,
-				})
-			}
-
-			if err != nil {
-				return fmt.Errorf("failed to send analytics: %v", err)
-			}
-
+		cmd := CreateResponseCommand(resource , isTimestampSet , d , eventType , t )
+		err = cmd.HandleResponse()
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -318,4 +261,116 @@ func (d *Daemon) saveLatestTime(t time.Time) {
 	if d.lastTime == nil || t.After(*d.lastTime) {
 		d.lastTime = &t
 	}
+}
+
+type ResponseCommand interface {
+	HandleResponse() error
+}
+
+type AppCreatedCmd struct {
+	resource Resource
+	isTimestampSet bool
+	d *Daemon
+	eventType string
+	t time.Time
+}
+
+func(ac *AppCreatedCmd) HandleResponse() error {
+	buildpack, ok := buildpackWhitelist[ac.resource.Entity.Metadata.Request.Buildpack]
+	if !ok {
+		buildpack = "custom"
+	}
+	var properties = analytics.Properties{
+		"buildpack": buildpack,
+		"os":        runtime.GOOS,
+		"version":   ac.d.version,
+	}
+
+	var err error
+
+	if ac.isTimestampSet {
+		err = ac.d.analyticsClient.Enqueue(analytics.Track{
+			UserId:     ac.d.UUID,
+			Event:      ac.eventType,
+			Timestamp:  ac.t,
+			Properties: properties,
+		})
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to send analytics: %v", err)
+	}
+
+	return nil
+}
+
+type ServiceCreatedCmd struct {
+	resource Resource
+	isTimestampSet bool
+	d *Daemon
+	eventType string
+	t time.Time
+}
+
+func(sc *ServiceCreatedCmd) HandleResponse() error {
+	var servicePlanResponse ServicePlanResponse
+	servicePlanEndpoint := "/v2/service_plans/" + sc.resource.Entity.Metadata.Request.ServicePlanGUID
+	err := sc.d.fetch(servicePlanEndpoint, nil, &servicePlanResponse)
+	if err != nil {
+		return err
+	}
+
+	serviceGUID := servicePlanResponse.ServicePlanEntity.ServicePlanGUID
+
+	var serviceResponse ServiceResponse
+	serviceEndpoint := "/v2/services/" + serviceGUID
+	err = sc.d.fetch(serviceEndpoint, nil, &serviceResponse)
+	if err != nil {
+		return err
+	}
+	serviceType := serviceResponse.ServiceEntity.ServiceLabel
+
+	var properties = analytics.Properties{
+		"service": serviceType,
+		"os":      runtime.GOOS,
+		"version": sc.d.version,
+	}
+
+	if sc.isTimestampSet {
+		err = sc.d.analyticsClient.Enqueue(analytics.Track{
+			UserId:     sc.d.UUID,
+			Event:      sc.eventType,
+			Timestamp:  sc.t,
+			Properties: properties,
+		})
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to send analytics: %v", err)
+	}
+
+	return nil
+}
+
+func CreateResponseCommand(resource Resource, isTimestampSet bool, d *Daemon, eventType string, t time.Time) ResponseCommand {
+	switch eventType {
+	case "app created":
+		return  &AppCreatedCmd {
+			resource: resource,
+			isTimestampSet: isTimestampSet,
+			d: d,
+			eventType: eventType,
+			t: t,
+		}
+	case "service created":
+		return &ServiceCreatedCmd {
+			resource: resource,
+			isTimestampSet: isTimestampSet,
+			d: d,
+			eventType: eventType,
+			t: t,
+		}
+	}
+
+	return nil
 }
