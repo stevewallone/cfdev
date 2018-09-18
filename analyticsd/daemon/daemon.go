@@ -223,24 +223,19 @@ func (d *Daemon) do(isTimestampSet bool) error {
 		case "service created":
 			var servicePlanResponse ServicePlanResponse
 			servicePlanEndpoint := "/v2/service_plans/" + resource.Entity.Metadata.Request.ServicePlanGUID
-			os.Mkdir("/tmp/ServicePlanEndpoint:" + servicePlanEndpoint, 0777)
-			err := d.fetch(servicePlanEndpoint, nil, servicePlanResponse)
+			err := d.fetch(servicePlanEndpoint, nil, &servicePlanResponse)
 			if err != nil {
-				os.Mkdir("/tmp/" + err.Error(), 0777)
 				return err
 			}
 			serviceGUID := servicePlanResponse.ServicePlanEntity.ServicePlanGUID
-			os.Mkdir("/tmp/second-api-call-successful", 0777)
 
 			var serviceResponse ServiceResponse
 			serviceEndpoint := "/v2/services/" + serviceGUID
-			err = d.fetch(serviceEndpoint, nil, serviceResponse)
+			err = d.fetch(serviceEndpoint, nil, &serviceResponse)
 			if err != nil {
 				return err
 			}
 			serviceType := serviceResponse.ServiceEntity.ServiceLabel
-			os.Mkdir("/tmp/third-api-call-successful", 0777)
-
 
 			var properties = analytics.Properties{
 				"service":	serviceType,
