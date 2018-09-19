@@ -433,59 +433,7 @@ var _ = Describe("Integration", func() {
 	})
 
 	Describe("HandleServiceCreated", func() {
-		It("WORK NOW", func() {
-			var mockResource = daemon.Resource{
-				Entity: daemon.Entity{
-					Metadata: daemon.Metadata{
-						Request: daemon.Request{
-							ServicePlanGUID: "myPlan",
-						},
-					},
-				},
-			}
 
-			var mockServicePlanResponse = `
-			{
-				"entity": {
-					"service_guid": "myServiceGuid"
-				}
-			}
- 			`
-			var mockServiceResponse = `
-			{
-				"entity": {
-					"label": "myLabel"
-				}
-			}
-			`
-
-			t := time.Date(2018, 8, 9, 8, 8, 8, 0, time.UTC)
-
-			ccServer.AppendHandlers(
-				ghttp.CombineHandlers(
-					ghttp.VerifyRequest(http.MethodGet, "/v2/service_plans/myPlan"),
-					ghttp.RespondWith(http.StatusOK, mockServicePlanResponse),
-				),
-				ghttp.CombineHandlers(
-					ghttp.VerifyRequest(http.MethodGet, "/v2/services/myServiceGuid"),
-					ghttp.RespondWith(http.StatusOK, mockServiceResponse),
-				),
-			)
-
-			mockAnalytics.EXPECT().Enqueue(analytics.Track{
-				UserId:    "some-user-uuid",
-				Event:     "service created",
-				Timestamp: t,
-				Properties: map[string]interface{}{
-					"service": "myLabel",
-					"os":      runtime.GOOS,
-					"version": "some-version",
-				},
-			})
-
-			cmd := daemon.CreateResponseCommand(mockResource, true, aDaemon, "service created", t)
-			cmd.HandleResponse()
-		})
 	})
 })
 

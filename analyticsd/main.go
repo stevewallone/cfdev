@@ -20,7 +20,7 @@ import (
 var (
 	analyticsKey    string
 	version         string
-	pollingInterval = 10*time.Minute
+	pollingInterval = 10 * time.Minute
 )
 
 func main() {
@@ -48,7 +48,7 @@ func main() {
 	}
 
 	if len(os.Args) > 1 && os.Args[1] == "debug" {
-		pollingInterval = 10*time.Second
+		pollingInterval = 10 * time.Second
 		fmt.Printf("[DEBUG] analyticsKey: %q\n", analyticsKey)
 		fmt.Printf("[DEBUG] userID: %q\n", userID)
 		fmt.Printf("[DEBUG] pollingInterval: %v\n", pollingInterval)
