@@ -23,6 +23,11 @@ func (h *Host) CheckRequirements() error {
 	return h.hypervEnabled()
 }
 
+func (h *Host) Version() (string, error) {
+	output, err := exec.Command("powershell.exe", "-Command", "[System.Environment]::OSVersion.VersionString").Output()
+	return strings.TrimSpace(string(output)), err
+}
+
 func (h *Host) hasAdminPrivileged() error {
 	command := fmt.Sprintf("(%s).IsInRole(%s)", current_user, admin_role)
 	output, err := h.Powershell.Output(command)
