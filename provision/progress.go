@@ -16,6 +16,26 @@ type UI interface {
 	Writer() io.Writer
 }
 
+func (c *Controller) WhiteListServices(whiteList string, services []Service) ([]Service, error) {
+	if services == nil {
+		return nil, e.New("Error whitelisting services")
+	}
+
+	if whiteList == "" || strings.ToLower(whiteList) == "all" {
+		return services, nil
+	}
+
+	var whiteListed []Service
+
+	for _, service := range services {
+		if strings.ToLower(whiteList) == strings.ToLower(service.Name) {
+			whiteListed = append(whiteListed, service)
+		}
+	}
+
+	return whiteListed, nil
+}
+
 func (c *Controller) DeployServices(ui UI, services []Service) error {
 	config, err := c.FetchBOSHConfig()
 	if err != nil {
