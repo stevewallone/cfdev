@@ -51,12 +51,14 @@ var _ = Describe("Start", func() {
 	services := []provision.Service{
 		{
 			Name:       "some-service",
+			Flagname:   "some-service-flagname",
 			Handle:     "some-handle",
 			Script:     "/path/to/some-script",
 			Deployment: "some-deployment",
 		},
 		{
 			Name:       "some-other-service",
+			Flagname:   "some-other-service-flagname",
 			Handle:     "some-other-handle",
 			Script:     "/path/to/some-other-script",
 			Deployment: "some-other-deployment",
@@ -280,7 +282,7 @@ var _ = Describe("Start", func() {
 						mockIsoReader.EXPECT().Read(depsIsoPath).Return(metadata, nil),
 						mockUI.EXPECT().Say("Creating the VM..."),
 						mockHypervisor.EXPECT().CreateVM(hypervisor.VM{
-							Name: "cfdev",
+							Name:     "cfdev",
 							CPUs:     7,
 							MemoryMB: 8765,
 							DepsIso:  filepath.Join(cacheDir, "cf-deps.iso"),
@@ -432,8 +434,8 @@ var _ = Describe("Start", func() {
 				})
 			})
 
-			Context("arg is some-other-service", func() {
-				It("WhiteListServices is called with some-other-service", func() {
+			Context("arg is some-other-service-flagname", func() {
+				It("WhiteListServices is called with some-other-service-flagname", func() {
 					if runtime.GOOS == "darwin" {
 						mockUI.EXPECT().Say("Installing cfdevd network helper...")
 						mockCFDevD.EXPECT().Install()
@@ -474,8 +476,8 @@ var _ = Describe("Start", func() {
 						mockUI.EXPECT().Say("Deploying CF..."),
 						mockProvisioner.EXPECT().ReportProgress(mockUI, "cf"),
 						mockProvisioner.EXPECT().DeployCloudFoundry(nil),
-						mockProvisioner.EXPECT().WhiteListServices("some-other-service", services).Return(services, nil),
-						mockProvisioner.EXPECT().DeployServices(mockUI, services),
+						mockProvisioner.EXPECT().WhiteListServices("some-other-service-flagname", services).Return(services[1:], nil),
+						mockProvisioner.EXPECT().DeployServices(mockUI, services[1:]),
 
 						mockToggle.EXPECT().Get().Return(true),
 						mockAnalyticsD.EXPECT().Start(),
@@ -485,12 +487,12 @@ var _ = Describe("Start", func() {
 					Expect(startCmd.Execute(start.Args{
 						Cpus:                7,
 						Mem:                 0,
-						DeploySingleService: "some-other-service",
+						DeploySingleService: "some-other-service-flagname",
 					})).To(Succeed())
 				})
 			})
 
-			Context("arg is and unsupported service", func() {
+			Context("arg is an unsupported service", func() {
 				It("only mysql is provisioned", func() {
 
 				})

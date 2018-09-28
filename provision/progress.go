@@ -3,8 +3,9 @@ package provision
 import (
 	"io"
 	"time"
-
+	"strings"
 	"fmt"
+	e "errors"
 
 	"code.cloudfoundry.org/cfdev/bosh"
 	"code.cloudfoundry.org/cfdev/errors"
@@ -21,14 +22,24 @@ func (c *Controller) WhiteListServices(whiteList string, services []Service) ([]
 		return nil, e.New("Error whitelisting services")
 	}
 
-	if whiteList == "" || strings.ToLower(whiteList) == "all" {
+	if strings.ToLower(whiteList) == "all" {
 		return services, nil
 	}
 
 	var whiteListed []Service
 
+	if whiteList == "" {
+		for _, service := range services {
+			if strings.ToLower(service.Flagname) != "scs" {
+				whiteListed = append(whiteListed, service)
+			}
+		}
+
+		return whiteListed, nil
+	}
+
 	for _, service := range services {
-		if strings.ToLower(whiteList) == strings.ToLower(service.Name) {
+		if (strings.ToLower(whiteList) == strings.ToLower(service.Flagname)) || ("always-include" == strings.ToLower(service.Flagname)) {
 			whiteListed = append(whiteListed, service)
 		}
 	}

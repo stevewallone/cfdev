@@ -374,7 +374,7 @@ func (s *Start) isServiceSupported(service string, services []provision.Service)
 	}
 
 	for _, s := range services {
-		if strings.ToLower(s.Name) == strings.ToLower(service) {
+		if strings.ToLower(s.Flagname) == strings.ToLower(service) {
 			return true
 		}
 	}

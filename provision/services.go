@@ -45,6 +45,7 @@ func (c *Controller) DeployService(handle, script string) error {
 
 type Service struct {
 	Name       string `yaml:"name"`
+	Flagname   string `yaml:"flagname"`
 	Handle     string `yaml:"handle"`
 	Script     string `yaml:"script"`
 	Deployment string `yaml:"deployment"`
