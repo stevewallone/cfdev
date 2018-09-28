@@ -28,9 +28,19 @@ func (c *Controller) WhiteListServices(whiteList string, services []Service) ([]
 
 	var whiteListed []Service
 
+	if whiteList == "none" {
+		for _, service := range services {
+			if service.Flagname == "always-include" {
+				whiteListed = append(whiteListed, service)
+			}
+		}
+
+		return whiteListed, nil
+	}
+
 	if whiteList == "" {
 		for _, service := range services {
-			if strings.ToLower(service.Flagname) != "scs" {
+			if service.DefaultDeploy {
 				whiteListed = append(whiteListed, service)
 			}
 		}
@@ -39,7 +49,7 @@ func (c *Controller) WhiteListServices(whiteList string, services []Service) ([]
 	}
 
 	for _, service := range services {
-		if (strings.ToLower(whiteList) == strings.ToLower(service.Flagname)) || ("always-include" == strings.ToLower(service.Flagname)) {
+		if (strings.ToLower(whiteList) == strings.ToLower(service.Flagname)) || (strings.ToLower(service.Flagname) == "always-include") {
 			whiteListed = append(whiteListed, service)
 		}
 	}

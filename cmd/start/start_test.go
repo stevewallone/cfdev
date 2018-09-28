@@ -50,18 +50,20 @@ var _ = Describe("Start", func() {
 
 	services := []provision.Service{
 		{
-			Name:       "some-service",
-			Flagname:   "some-service-flagname",
-			Handle:     "some-handle",
-			Script:     "/path/to/some-script",
-			Deployment: "some-deployment",
+			Name:          "some-service",
+			Flagname:      "some-service-flagname",
+			DefaultDeploy: true,
+			Handle:        "some-handle",
+			Script:        "/path/to/some-script",
+			Deployment:    "some-deployment",
 		},
 		{
-			Name:       "some-other-service",
-			Flagname:   "some-other-service-flagname",
-			Handle:     "some-other-handle",
-			Script:     "/path/to/some-other-script",
-			Deployment: "some-other-deployment",
+			Name:          "some-other-service",
+			Flagname:      "some-other-service-flagname",
+			DefaultDeploy: false,
+			Handle:        "some-other-handle",
+			Script:        "/path/to/some-other-script",
+			Deployment:    "some-other-deployment",
 		},
 	}
 	BeforeEach(func() {
@@ -493,8 +495,35 @@ var _ = Describe("Start", func() {
 			})
 
 			Context("arg is an unsupported service", func() {
-				It("only mysql is provisioned", func() {
+				It("returns an error message and does not execute start command", func() {
+					if runtime.GOOS == "darwin" {
+						mockUI.EXPECT().Say("Installing cfdevd network helper...")
+						mockCFDevD.EXPECT().Install()
+					}
 
+					gomock.InOrder(
+						mockToggle.EXPECT().SetProp("type", "cf"),
+						mockAnalyticsClient.EXPECT().Event(cfanalytics.START_BEGIN),
+						mockHost.EXPECT().CheckRequirements(),
+						mockHypervisor.EXPECT().IsRunning("cfdev").Return(false, nil),
+						mockStop.EXPECT().RunE(nil, nil),
+
+						mockHostNet.EXPECT().AddLoopbackAliases("some-bosh-director-ip", "some-cf-router-ip"),
+						mockUI.EXPECT().Say("Downloading Resources..."),
+						mockCache.EXPECT().Sync(resource.Catalog{
+							Items: []resource.Item{
+								{Name: "some-item"},
+								{Name: "cf-deps.iso"},
+							},
+						}),
+						mockIsoReader.EXPECT().Read(depsIsoPath).Return(metadata, nil),
+					)
+
+					Expect(startCmd.Execute(start.Args{
+						Cpus:        7,
+						Mem:         6666,
+						DeploySingleService: "non-existent-service",
+					}).Error()).To(ContainSubstring("is not supported"))
 				})
 			})
 		})
