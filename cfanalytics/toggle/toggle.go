@@ -9,9 +9,9 @@ import (
 
 type Toggle struct {
 	defined bool
-	value   bool
+	cfAnalyticsEnabled bool
+	customAnalyticsEnabled bool
 	path    string
-	props   map[string]interface{}
 }
 
 const deprecatedTrueVal = "optin"

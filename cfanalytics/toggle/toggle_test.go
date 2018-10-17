@@ -24,6 +24,50 @@ var _ = Describe("Toggle", func() {
 		os.RemoveAll(tmpDir)
 	})
 
+	Describe("Analytics file exists",func(){
+		Context("cf and custom are enabled", func() {
+			Expect(t.Enabled()).To(BeTrue())
+			Expect(t.IsCustom()).To(BeTrue())
+		})
+
+		Context("cf and custom are disabled", func() {
+			Expect(t.Enabled()).To(BeFalse())
+			Expect(t.IsCustom()).To(BeFalse())
+		})
+
+		Context("cf is enabled and custom is disabled", func() {
+			Expect(t.Enabled()).To(BeTrue())
+			Expect(t.IsCustom()).To(BeFalse())
+		})
+
+		Context("cf is disabled and custom is enabled", func() {
+			Expect(t.Enabled()).To(BeTrue())
+			Expect(t.IsCustom()).To(BeTrue())
+		})
+	})
+
+	Describe("Analytics file does NOT exist",func(){
+		Context("cf is disabled and custom is enabled", func() {
+			Expect(t.Enabled()).To(BeTrue())
+			Expect(t.IsCustom()).To(BeTrue())
+		})
+	})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	Describe("Defined", func() {
 		Context("save file exists with json and key enabled", func() {
 			BeforeEach(func() {

@@ -96,14 +96,18 @@ func (a *Analytics) Event(event string, data ...map[string]interface{}) error {
 	})
 }
 
-func (a *Analytics) PromptOptIn() error {
+func (a *Analytics) PromptOptInIfNeeded(customMessage string) error {
 	if !a.toggle.Defined() {
-		response := a.ui.Ask(`
+		message := `
 CF Dev collects anonymous usage data to help us improve your user experience. We intend to share these anonymous usage analytics with user community by publishing quarterly reports at :
 
 https://github.com/pivotal-cf/cfdev/wiki/Telemetry
 
-Are you ok with CF Dev periodically capturing anonymized telemetry [y/N]?`)
+Are you ok with CF Dev periodically capturing anonymized telemetry [y/N]?`
+		if customMessage != "" {
+			message = customMessage
+		}
+		response := a.ui.Ask(message)
 
 		select {
 		case <-a.exit:
