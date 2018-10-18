@@ -25,6 +25,7 @@ const (
 //go:generate mockgen -package mocks -destination mocks/toggle.go code.cloudfoundry.org/cfdev/cfanalytics Toggle
 type Toggle interface {
 	Defined() bool
+	CustomAnalyticsDefined() bool
 	Enabled() bool
 	IsCustom() bool
 	SetCFAnalyticsEnabled(value bool) error
@@ -80,14 +81,6 @@ func (a *Analytics) Event(event string, data ...map[string]interface{}) error {
 	properties.Set("os", runtime.GOOS)
 	properties.Set("plugin_version", a.version)
 	properties.Set("os_version", a.osVersion)
-	//for k, v := range a.toggle.GetProps() {
-	//	properties.Set(k, v)
-	//}
-	//for _, d := range data {
-	//	for k, v := range d {
-	//		properties.Set(k, v)
-	//	}
-	//}
 
 	return a.client.Enqueue(analytics.Track{
 		UserId:     a.userId,
@@ -98,9 +91,9 @@ func (a *Analytics) Event(event string, data ...map[string]interface{}) error {
 }
 
 func (a *Analytics) PromptOptInIfNeeded(customMessage string) error {
-	if !a.toggle.Defined() {
+	useCustom := customMessage != ""
 
-		useCustom := customMessage != ""
+	if !a.toggle.Defined() || (useCustom && !a.toggle.CustomAnalyticsDefined()) {
 
 		message := `
 		CF Dev collects anonymous usage data to help us improve your user experience. We intend to share these anonymous usage analytics with user community by publishing quarterly reports at :

@@ -15,10 +15,6 @@ type Toggle struct {
 	path                   string
 }
 
-const deprecatedTrueVal = "optin"
-const deprecatedFalseVal = "optout"
-const keyEnabled = "enabled"
-
 func New(path string) *Toggle {
 	t := &Toggle{
 		defined:                false,
@@ -41,6 +37,14 @@ func New(path string) *Toggle {
 
 func (t *Toggle) Defined() bool {
 	return t.defined
+}
+
+func (t *Toggle) CustomAnalyticsDefined() bool {
+	if !t.defined {
+		return false
+	} else {
+		return !(t.CfAnalyticsEnabled && !t.CustomAnalyticsEnabled)
+	}
 }
 
 func (t *Toggle) Enabled() bool {

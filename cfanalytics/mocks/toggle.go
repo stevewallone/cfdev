@@ -32,6 +32,18 @@ func (m *MockToggle) EXPECT() *MockToggleMockRecorder {
 	return m.recorder
 }
 
+// CustomAnalyticsDefined mocks base method
+func (m *MockToggle) CustomAnalyticsDefined() bool {
+	ret := m.ctrl.Call(m, "CustomAnalyticsDefined")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// CustomAnalyticsDefined indicates an expected call of CustomAnalyticsDefined
+func (mr *MockToggleMockRecorder) CustomAnalyticsDefined() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CustomAnalyticsDefined", reflect.TypeOf((*MockToggle)(nil).CustomAnalyticsDefined))
+}
+
 // Defined mocks base method
 func (m *MockToggle) Defined() bool {
 	ret := m.ctrl.Call(m, "Defined")
