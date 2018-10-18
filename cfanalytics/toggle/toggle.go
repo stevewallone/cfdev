@@ -2,16 +2,17 @@ package toggle
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 )
 
 type Toggle struct {
-	defined bool
-	cfAnalyticsEnabled bool
-	customAnalyticsEnabled bool
-	path    string
+	defined                bool
+	CfAnalyticsEnabled     bool `json:"cfAnalyticsEnabled"`
+	CustomAnalyticsEnabled bool `json:"customAnalyticsEnabled"`
+	path                   string
 }
 
 const deprecatedTrueVal = "optin"
@@ -20,34 +21,21 @@ const keyEnabled = "enabled"
 
 func New(path string) *Toggle {
 	t := &Toggle{
-		defined: false,
-		value:   false,
-		path:    path,
-		props:   make(map[string]interface{}, 1),
+		defined:                false,
+		CfAnalyticsEnabled:     false,
+		CustomAnalyticsEnabled: false,
+		path:                   path,
 	}
+
 	if txt, err := ioutil.ReadFile(path); err == nil {
-		if string(txt) == deprecatedFalseVal {
+		if err := json.Unmarshal(txt, &t); err == nil {
+			t.path = path
 			t.defined = true
-			t.value = false
-		} else if string(txt) == deprecatedTrueVal {
-			t.defined = true
-			t.value = true
 		} else {
-			data := make(map[string]interface{}, 1)
-			if err := json.Unmarshal(txt, &data); err == nil {
-				if _, t.defined = data[keyEnabled]; t.defined {
-					if v, ok := data[keyEnabled].(bool); ok {
-						t.value = v
-					}
-				}
-				if v, ok := data["props"]; ok {
-					if props, ok := v.(map[string]interface{}); ok {
-						t.props = props
-					}
-				}
-			}
+			fmt.Printf("Error unmarshalling json: %v", err)
 		}
 	}
+
 	return t
 }
 
@@ -55,34 +43,40 @@ func (t *Toggle) Defined() bool {
 	return t.defined
 }
 
-func (t *Toggle) Get() bool {
-	return t.value
+func (t *Toggle) Enabled() bool {
+	return t.CfAnalyticsEnabled || t.CustomAnalyticsEnabled
 }
 
-func (t *Toggle) Set(value bool) error {
+func (t *Toggle) IsCustom() bool {
+	return t.CustomAnalyticsEnabled
+}
+
+func (t *Toggle) SetCFAnalyticsEnabled(value bool) error {
 	t.defined = true
-	t.value = value
+	if !value {
+		t.CfAnalyticsEnabled = value
+		t.CustomAnalyticsEnabled = value
+	} else {
+		t.CfAnalyticsEnabled = value
+	}
+
 	return t.save()
 }
 
-func (t *Toggle) GetProps() map[string]interface{} {
-	return t.props
-}
-
-func (t *Toggle) SetProp(k, v string) error {
-	t.props[k] = v
+func (t *Toggle) SetCustomAnalyticsEnabled(value bool) error {
+	t.defined = true
+	t.CfAnalyticsEnabled = value
+	t.CustomAnalyticsEnabled = value
 	return t.save()
 }
 
 func (t *Toggle) save() error {
 	os.MkdirAll(filepath.Dir(t.path), 0755)
-	hash := map[string]interface{}{"props": t.props}
-	if t.defined {
-		hash["enabled"] = t.value
-	}
-	txt, err := json.Marshal(hash)
+
+	bytes, err := json.Marshal(t)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(t.path, txt, 0644)
+
+	return ioutil.WriteFile(t.path, bytes, 0644)
 }

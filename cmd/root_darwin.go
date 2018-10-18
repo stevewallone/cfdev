@@ -47,9 +47,9 @@ type AnalyticsClient interface {
 }
 
 type Toggle interface {
-	Get() bool
-	Set(value bool) error
-	SetProp(k, v string) error
+	Defined() bool
+	Enabled() bool
+	IsCustom() bool
 }
 
 func NewRoot(exit chan struct{}, ui UI, config config.Config, analyticsClient AnalyticsClient, analyticsToggle Toggle) *cobra.Command {

@@ -39,8 +39,9 @@ type AnalyticsClient interface {
 
 //go:generate mockgen -package mocks -destination mocks/toggle.go code.cloudfoundry.org/cfdev/cmd/start Toggle
 type Toggle interface {
-	Get() bool
-	SetProp(k, v string) error
+	Enabled() bool
+	SetCFAnalyticsEnabled(value bool) error
+	SetCustomAnalyticsEnabled(value bool) error
 }
 
 //go:generate mockgen -package mocks -destination mocks/system-profiler.go code.cloudfoundry.org/cfdev/cmd/start SystemProfiler
@@ -313,9 +314,9 @@ func (s *Start) Execute(args Args) error {
 		return err
 	}
 
-	if s.AnalyticsToggle.Get() {
-		err = s.AnalyticsD.Start()
-	}
+	//if s.AnalyticsToggle.Get() {
+	//	err = s.AnalyticsD.Start()
+	//}
 
 	s.Analytics.Event(cfanalytics.START_END)
 

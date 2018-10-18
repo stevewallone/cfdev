@@ -1,13 +1,13 @@
 package toggle_test
 
 import (
+	"code.cloudfoundry.org/cfdev/cfanalytics/toggle"
+	"fmt"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	"code.cloudfoundry.org/cfdev/cfanalytics/toggle"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Toggle", func() {
@@ -16,7 +16,7 @@ var _ = Describe("Toggle", func() {
 	)
 	BeforeEach(func() {
 		var err error
-		tmpDir, err = ioutil.TempDir("", "analytics.")
+		tmpDir, err = ioutil.TempDir("", "analytics")
 		Expect(err).ToNot(HaveOccurred())
 		saveFile = filepath.Join(tmpDir, "somefile.txt")
 	})
@@ -24,244 +24,85 @@ var _ = Describe("Toggle", func() {
 		os.RemoveAll(tmpDir)
 	})
 
-	Describe("Analytics file exists",func(){
+	Describe("Analytics file exists", func() {
 		Context("cf and custom are enabled", func() {
-			Expect(t.Enabled()).To(BeTrue())
-			Expect(t.IsCustom()).To(BeTrue())
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":true,"customAnalyticsEnabled":true}`), 0644)).To(Succeed())
+			})
+
+			It("returns enabled true and custom is true", func() {
+				t := toggle.New(saveFile)
+
+				Expect(t.Enabled()).To(BeTrue())
+				Expect(t.IsCustom()).To(BeTrue())
+			})
 		})
 
 		Context("cf and custom are disabled", func() {
-			Expect(t.Enabled()).To(BeFalse())
-			Expect(t.IsCustom()).To(BeFalse())
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":false,"customAnalyticsEnabled":false}`), 0644)).To(Succeed())
+			})
+
+			It("returns enabled true and custom is false", func() {
+				t := toggle.New(saveFile)
+
+				Expect(t.Enabled()).To(BeFalse())
+				Expect(t.IsCustom()).To(BeFalse())
+			})
 		})
 
 		Context("cf is enabled and custom is disabled", func() {
-			Expect(t.Enabled()).To(BeTrue())
-			Expect(t.IsCustom()).To(BeFalse())
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":true,"customAnalyticsEnabled":false}`), 0644)).To(Succeed())
+			})
+
+			It("returns enabled true and custom is false", func() {
+				t := toggle.New(saveFile)
+
+				Expect(t.Enabled()).To(BeTrue())
+				Expect(t.IsCustom()).To(BeFalse())
+			})
 		})
 
 		Context("cf is disabled and custom is enabled", func() {
-			Expect(t.Enabled()).To(BeTrue())
-			Expect(t.IsCustom()).To(BeTrue())
-		})
-	})
-
-	Describe("Analytics file does NOT exist",func(){
-		Context("cf is disabled and custom is enabled", func() {
-			Expect(t.Enabled()).To(BeTrue())
-			Expect(t.IsCustom()).To(BeTrue())
-		})
-	})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	Describe("Defined", func() {
-		Context("save file exists with json and key enabled", func() {
 			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`{"enabled":null}`), 0644)).To(Succeed())
+				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":false,"customAnalyticsEnabled":true}`), 0644)).To(Succeed())
 			})
-			It("returns true", func() {
-				t := toggle.New(saveFile)
-				Expect(t.Defined()).To(BeTrue())
-			})
-		})
-		Context("save file exists with json but NOT key enabled", func() {
-			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`{"something":null}`), 0644)).To(Succeed())
-			})
-			It("returns false", func() {
-				t := toggle.New(saveFile)
-				Expect(t.Defined()).To(BeFalse())
-			})
-		})
-		Context("save file exists with deprecatedTrueVal", func() {
-			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`optin`), 0644)).To(Succeed())
-			})
-			It("returns true", func() {
-				t := toggle.New(saveFile)
-				Expect(t.Defined()).To(BeTrue())
-			})
-		})
-		Context("save file exists with deprecatedFalseVal", func() {
-			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`optout`), 0644)).To(Succeed())
-			})
-			It("returns true", func() {
-				t := toggle.New(saveFile)
-				Expect(t.Defined()).To(BeTrue())
-			})
-		})
-		Context("save file does NOT exist", func() {
-			It("returns false", func() {
-				t := toggle.New(saveFile)
-				Expect(t.Defined()).To(BeFalse())
-			})
-		})
-	})
 
-	Describe("Get", func() {
-		Context("save file exists with json and key enabled == true", func() {
+			It("returns enabled true and custom is true", func() {
+				t := toggle.New(saveFile)
+
+				Expect(t.Enabled()).To(BeTrue())
+				Expect(t.IsCustom()).To(BeTrue())
+			})
+		})
+
+		Context("update cfanalytics from false to true and save", func() {
 			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`{"enabled":true}`), 0644)).To(Succeed())
+				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":false,"customAnalyticsEnabled":false}`), 0644)).To(Succeed())
 			})
-			It("returns true", func() {
-				t := toggle.New(saveFile)
-				Expect(t.Get()).To(BeTrue())
-			})
-		})
-		Context("save file exists with json and key enabled == false", func() {
-			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`{"enabled":false}`), 0644)).To(Succeed())
-			})
-			It("returns false", func() {
-				t := toggle.New(saveFile)
-				Expect(t.Get()).To(BeFalse())
-			})
-		})
-		Context("save file exists with json and key enabled == 'a non bool'", func() {
-			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`{"enabled":"something"}`), 0644)).To(Succeed())
-			})
-			It("returns false", func() {
-				t := toggle.New(saveFile)
-				Expect(t.Get()).To(BeFalse())
-			})
-		})
-		Context("save file exists with deprecatedTrueVal", func() {
-			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`optin`), 0644)).To(Succeed())
-			})
-			It("returns true", func() {
-				t := toggle.New(saveFile)
-				Expect(t.Get()).To(BeTrue())
-			})
-		})
-		Context("save file exists with deprecatedFalseVal", func() {
-			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`optout`), 0644)).To(Succeed())
-			})
-			It("returns false", func() {
-				t := toggle.New(saveFile)
-				Expect(t.Get()).To(BeFalse())
-			})
-		})
-		Context("save file does NOT exist", func() {
-			It("returns false", func() {
-				t := toggle.New(saveFile)
-				Expect(t.Get()).To(BeFalse())
-			})
-		})
-	})
 
-	Describe("GetProps", func() {
-		Context("file missing", func() {
-			It("is empty", func() {
+			It("updates somefile.txt", func() {
 				t := toggle.New(saveFile)
-				Expect(t.GetProps()).To(BeEmpty())
+				Expect(t.SetCustomAnalyticsEnabled(true)).ToNot(HaveOccurred())
+				Expect(t.IsCustom()).To(BeTrue())
+
+				txt, err := ioutil.ReadFile(saveFile)
+				Expect(err).ToNot(HaveOccurred())
+
+				fmt.Printf("TXT: %v", string(txt))
+
+				Expect(string(txt)).To(Equal(`{"cfAnalyticsEnabled":true,"customAnalyticsEnabled":true}`))
 			})
 		})
-		Context("file has props", func() {
-			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`{"props":{"key":"value","other":"thing"}}`), 0644)).To(Succeed())
-			})
-			It("returns data from file", func() {
-				t := toggle.New(saveFile)
-				Expect(t.GetProps()).To(BeEquivalentTo(map[string]interface{}{
-					"key":   "value",
-					"other": "thing",
-				}))
-			})
-		})
-	})
 
-	Describe("Set", func() {
-		var (
-			t *toggle.Toggle
-		)
-		BeforeEach(func() {
-			saveFile = filepath.Join(tmpDir, "somedir", "somefile.txt")
-			t = toggle.New(saveFile)
-		})
-		It("sets val for get", func() {
-			Expect(t.Set(true)).To(Succeed())
-			Expect(t.Get()).To(BeTrue())
+		Describe("Analytics file does NOT exist", func() {
+			Context("cf is disabled and custom is enabled", func() {
+				It("returns enabled true and custom is true and defined is true", func() {
+					t := toggle.New("/non-existing-path")
 
-			Expect(t.Set(false)).To(Succeed())
-			Expect(t.Get()).To(BeFalse())
-		})
-		It("writes trueVal to file", func() {
-			Expect(t.Set(true)).To(Succeed())
-			Expect(ioutil.ReadFile(saveFile)).To(MatchJSON(`{
-				"enabled": true,
-				"props": {}
-			}`))
-		})
-		It("writes falseVal to file", func() {
-			Expect(t.Set(false)).To(Succeed())
-			Expect(ioutil.ReadFile(saveFile)).To(MatchJSON(`{
-				"enabled": false,
-				"props": {}
-			}`))
-		})
-	})
-
-	Describe("SetProp", func() {
-		var (
-			t *toggle.Toggle
-		)
-		BeforeEach(func() {
-			saveFile = filepath.Join(tmpDir, "somedir", "somefile.txt")
-			t = toggle.New(saveFile)
-		})
-		It("sets props", func() {
-			Expect(t.GetProps()).To(BeEquivalentTo(map[string]interface{}{}))
-
-			Expect(t.SetProp("key", "value")).To(Succeed())
-			Expect(t.GetProps()).To(BeEquivalentTo(map[string]interface{}{
-				"key": "value",
-			}))
-
-			Expect(t.SetProp("other", "thing")).To(Succeed())
-			Expect(t.GetProps()).To(BeEquivalentTo(map[string]interface{}{
-				"key":   "value",
-				"other": "thing",
-			}))
-		})
-		It("writes props to file", func() {
-			Expect(t.Set(false)).To(Succeed())
-			Expect(t.SetProp("key", "value")).To(Succeed())
-			Expect(t.SetProp("other", "thing")).To(Succeed())
-
-			Expect(ioutil.ReadFile(saveFile)).To(MatchJSON(`{
-				"enabled": false,
-				"props": {
-					"key": "value",
-					"other": "thing"
-				}
-			}`))
-		})
-		Context("optin was not defined", func() {
-			It("stores prop but not enabled flag", func() {
-				Expect(t.SetProp("key", "value")).To(Succeed())
-				Expect(ioutil.ReadFile(saveFile)).To(MatchJSON(`{
-					"props": {
-						"key": "value"
-					}
-				}`))
+					Expect(t.Defined()).To(BeFalse())
+				})
 			})
 		})
 	})
