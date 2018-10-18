@@ -43,7 +43,7 @@ type cmdBuilder interface {
 
 type AnalyticsClient interface {
 	Event(event string, data ...map[string]interface{}) error
-	PromptOptIn() error
+	PromptOptInIfNeeded() error
 }
 
 type Toggle interface {

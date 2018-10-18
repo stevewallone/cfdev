@@ -13,6 +13,7 @@ type Toggle struct {
 	CfAnalyticsEnabled     bool `json:"cfAnalyticsEnabled"`
 	CustomAnalyticsEnabled bool `json:"customAnalyticsEnabled"`
 	path                   string
+	props   map[string]interface{}
 }
 
 func New(path string) *Toggle {
@@ -21,6 +22,7 @@ func New(path string) *Toggle {
 		CfAnalyticsEnabled:     false,
 		CustomAnalyticsEnabled: false,
 		path:                   path,
+		props:   make(map[string]interface{}, 1),
 	}
 
 	if txt, err := ioutil.ReadFile(path); err == nil {
@@ -74,13 +76,25 @@ func (t *Toggle) SetCustomAnalyticsEnabled(value bool) error {
 	return t.save()
 }
 
+func (t *Toggle) GetProps() map[string]interface{} {
+	return t.props
+}
+
+func (t *Toggle) SetProp(k, v string) error {
+	t.props[k] = v
+	return t.save()
+}
+
 func (t *Toggle) save() error {
 	os.MkdirAll(filepath.Dir(t.path), 0755)
-
-	bytes, err := json.Marshal(t)
+	hash := map[string]interface{}{"props": t.props}
+	if t.defined {
+		hash["cfAnalyticsEnabled"] = t.CfAnalyticsEnabled
+		hash["customAnalyticsEnabled"] = t.CustomAnalyticsEnabled
+		}
+	txt, err := json.Marshal(hash)
 	if err != nil {
 		return err
 	}
-
-	return ioutil.WriteFile(t.path, bytes, 0644)
+	return ioutil.WriteFile(t.path, txt, 0644)
 }

@@ -26,7 +26,7 @@ var _ = Describe("Toggle", func() {
 	Describe("Analytics file exists", func() {
 		Context("cf and custom are enabled", func() {
 			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":true,"customAnalyticsEnabled":true}`), 0644)).To(Succeed())
+				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":true,"customAnalyticsEnabled":true,"props":{}}`), 0644)).To(Succeed())
 			})
 
 			It("returns enabled true and custom is true", func() {
@@ -40,7 +40,7 @@ var _ = Describe("Toggle", func() {
 
 		Context("cf and custom are disabled", func() {
 			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":false,"customAnalyticsEnabled":false}`), 0644)).To(Succeed())
+				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":false,"customAnalyticsEnabled":false,"props":{}}`), 0644)).To(Succeed())
 			})
 
 			It("returns enabled false and custom is false", func() {
@@ -54,7 +54,7 @@ var _ = Describe("Toggle", func() {
 
 		Context("cf is enabled and custom is disabled", func() {
 			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":true,"customAnalyticsEnabled":false}`), 0644)).To(Succeed())
+				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":true,"customAnalyticsEnabled":false,"props":{}}`), 0644)).To(Succeed())
 			})
 
 			It("returns enabled true and custom is false", func() {
@@ -68,7 +68,7 @@ var _ = Describe("Toggle", func() {
 
 		Context("cf is disabled and custom is enabled", func() {
 			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":false,"customAnalyticsEnabled":true}`), 0644)).To(Succeed())
+				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":false,"customAnalyticsEnabled":true,"props":{}}`), 0644)).To(Succeed())
 			})
 
 			It("returns enabled true and custom is true", func() {
@@ -82,7 +82,7 @@ var _ = Describe("Toggle", func() {
 
 		Context("update customAnalyticsEnabled from false to true and save", func() {
 			BeforeEach(func() {
-				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":false,"customAnalyticsEnabled":false}`), 0644)).To(Succeed())
+				Expect(ioutil.WriteFile(saveFile, []byte(`{"cfAnalyticsEnabled":false,"customAnalyticsEnabled":false,"props":{}}`), 0644)).To(Succeed())
 			})
 
 			It("updates somefile.txt", func() {
@@ -92,7 +92,7 @@ var _ = Describe("Toggle", func() {
 
 				txt, err := ioutil.ReadFile(saveFile)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(string(txt)).To(Equal(`{"cfAnalyticsEnabled":true,"customAnalyticsEnabled":true}`))
+				Expect(string(txt)).To(Equal(`{"cfAnalyticsEnabled":true,"customAnalyticsEnabled":true,"props":{}}`))
 			})
 		})
 
@@ -109,6 +109,33 @@ var _ = Describe("Toggle", func() {
 					Expect(t.Enabled()).To(BeTrue())
 					Expect(t.IsCustom()).To(BeTrue())
 				})
+			})
+		})
+		Describe("Set Prop", func() {
+			var (
+				t *toggle.Toggle
+			)
+			BeforeEach(func() {
+				saveFile = filepath.Join(tmpDir, "somedir", "somefile.txt")
+				t = toggle.New(saveFile)
+			})
+			It("sets props", func() {
+				Expect(t.GetProps()).To(BeEquivalentTo(map[string]interface{}{}))
+				Expect(t.SetProp("key", "value")).To(Succeed())
+				Expect(t.GetProps()).To(BeEquivalentTo(map[string]interface{}{
+					"key": "value",
+				}))
+				Expect(t.SetProp("other", "thing")).To(Succeed())
+				Expect(t.GetProps()).To(BeEquivalentTo(map[string]interface{}{
+					"key":   "value",
+					"other": "thing",
+				}))
+			})
+			It("writes props to file", func() {
+				Expect(t.SetCFAnalyticsEnabled(false)).To(Succeed())
+				Expect(t.SetProp("key", "value")).To(Succeed())
+				Expect(t.SetProp("other", "thing")).To(Succeed())
+				Expect(ioutil.ReadFile(saveFile)).To(MatchJSON(`{"cfAnalyticsEnabled":false,"customAnalyticsEnabled":false,"props": {"key": "value","other": "thing"}}`))
 			})
 		})
 	})

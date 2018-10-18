@@ -30,6 +30,8 @@ type Toggle interface {
 	IsCustom() bool
 	SetCFAnalyticsEnabled(value bool) error
 	SetCustomAnalyticsEnabled(value bool) error
+	GetProps() map[string]interface{}
+	SetProp(k, v string) error
 }
 
 //go:generate mockgen -package mocks -destination mocks/ui.go code.cloudfoundry.org/cfdev/cfanalytics UI
@@ -81,6 +83,14 @@ func (a *Analytics) Event(event string, data ...map[string]interface{}) error {
 	properties.Set("os", runtime.GOOS)
 	properties.Set("plugin_version", a.version)
 	properties.Set("os_version", a.osVersion)
+	for k, v := range a.toggle.GetProps() {
+		properties.Set(k, v)
+		}
+	for _, d := range data {
+		for k, v := range d {
+			properties.Set(k, v)
+			}
+		}
 
 	return a.client.Enqueue(analytics.Track{
 		UserId:     a.userId,

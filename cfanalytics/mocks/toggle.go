@@ -68,6 +68,18 @@ func (mr *MockToggleMockRecorder) Enabled() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Enabled", reflect.TypeOf((*MockToggle)(nil).Enabled))
 }
 
+// GetProps mocks base method
+func (m *MockToggle) GetProps() map[string]interface{} {
+	ret := m.ctrl.Call(m, "GetProps")
+	ret0, _ := ret[0].(map[string]interface{})
+	return ret0
+}
+
+// GetProps indicates an expected call of GetProps
+func (mr *MockToggleMockRecorder) GetProps() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProps", reflect.TypeOf((*MockToggle)(nil).GetProps))
+}
+
 // IsCustom mocks base method
 func (m *MockToggle) IsCustom() bool {
 	ret := m.ctrl.Call(m, "IsCustom")
@@ -102,4 +114,16 @@ func (m *MockToggle) SetCustomAnalyticsEnabled(arg0 bool) error {
 // SetCustomAnalyticsEnabled indicates an expected call of SetCustomAnalyticsEnabled
 func (mr *MockToggleMockRecorder) SetCustomAnalyticsEnabled(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCustomAnalyticsEnabled", reflect.TypeOf((*MockToggle)(nil).SetCustomAnalyticsEnabled), arg0)
+}
+
+// SetProp mocks base method
+func (m *MockToggle) SetProp(arg0, arg1 string) error {
+	ret := m.ctrl.Call(m, "SetProp", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetProp indicates an expected call of SetProp
+func (mr *MockToggleMockRecorder) SetProp(arg0, arg1 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetProp", reflect.TypeOf((*MockToggle)(nil).SetProp), arg0, arg1)
 }
