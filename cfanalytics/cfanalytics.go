@@ -105,12 +105,11 @@ func (a *Analytics) PromptOptInIfNeeded(customMessage string) error {
 
 	if !a.toggle.Defined() || (useCustom && !a.toggle.CustomAnalyticsDefined()) {
 
-		message := `
-		CF Dev collects anonymous usage data to help us improve your user experience. We intend to share these anonymous usage analytics with user community by publishing quarterly reports at :
+		message := `CF Dev collects anonymous usage data to help us improve your user experience. We intend to share these anonymous usage analytics with user community by publishing quarterly reports at :
 		
-		https://github.com/pivotal-cf/cfdev/wiki/Telemetry
+https://github.com/pivotal-cf/cfdev/wiki/Telemetry
 		
-		Are you ok with CF Dev periodically capturing anonymized telemetry [y/N]?`
+Are you ok with CF Dev periodically capturing anonymized telemetry [y/N]?`
 		if useCustom {
 			message = customMessage
 		}

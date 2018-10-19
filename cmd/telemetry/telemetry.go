@@ -1,13 +1,18 @@
 package telemetry
 
 import (
-	"code.cloudfoundry.org/cfdev/cfanalytics/toggle"
 	"code.cloudfoundry.org/cfdev/errors"
 	"github.com/spf13/cobra"
 )
 
 type UI interface {
 	Say(message string, args ...interface{})
+}
+
+type Toggle interface {
+	Enabled() bool
+	SetCustomAnalyticsEnabled(value bool) error
+	SetCFAnalyticsEnabled(value bool) error
 }
 
 //go:generate mockgen -package mocks -destination mocks/analyticsd.go code.cloudfoundry.org/cfdev/cmd/telemetry AnalyticsD
@@ -20,7 +25,7 @@ type AnalyticsD interface {
 
 type Telemetry struct {
 	UI              UI
-	AnalyticsToggle *toggle.Toggle
+	AnalyticsToggle Toggle
 	AnalyticsD      AnalyticsD
 	Args            struct {
 		FlagOff bool
