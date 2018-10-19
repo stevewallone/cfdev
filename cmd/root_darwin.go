@@ -43,13 +43,18 @@ type cmdBuilder interface {
 
 type AnalyticsClient interface {
 	Event(event string, data ...map[string]interface{}) error
-	PromptOptInIfNeeded() error
+	PromptOptInIfNeeded(customMessage string) error
 }
 
 type Toggle interface {
 	Defined() bool
 	Enabled() bool
+	CustomAnalyticsDefined() bool
 	IsCustom() bool
+	SetCFAnalyticsEnabled(value bool) error
+	SetCustomAnalyticsEnabled(value bool) error
+	GetProps() map[string]interface{}
+	SetProp(k, v string) error
 }
 
 func NewRoot(exit chan struct{}, ui UI, config config.Config, analyticsClient AnalyticsClient, analyticsToggle Toggle) *cobra.Command {

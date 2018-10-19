@@ -267,12 +267,7 @@ func (s *Start) Execute(args Args) error {
 		return fmt.Errorf("%s is not compatible with CF Dev. Please use a compatible file", depsIsoName)
 	}
 
-	if strings.ToLower(isoConfig.DeploymentName) == "cf" {
-		s.Analytics.PromptOptInIfNeeded("")
-	} else {
-		analyticsMessage := isoConfig.AnalyticsMessage
-		s.Analytics.PromptOptInIfNeeded(analyticsMessage)
-	}
+	s.Analytics.PromptOptInIfNeeded(isoConfig.AnalyticsMessage)
 
 	s.Analytics.Event(cfanalytics.START_BEGIN, map[string]interface{}{
 		"total memory":     tMem,

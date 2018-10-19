@@ -91,7 +91,7 @@ func (t *Toggle) save() error {
 	if t.defined {
 		hash["cfAnalyticsEnabled"] = t.CfAnalyticsEnabled
 		hash["customAnalyticsEnabled"] = t.CustomAnalyticsEnabled
-		}
+	}
 	txt, err := json.Marshal(hash)
 	if err != nil {
 		return err

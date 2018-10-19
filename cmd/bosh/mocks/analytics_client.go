@@ -50,13 +50,13 @@ func (mr *MockAnalyticsClientMockRecorder) Event(arg0 interface{}, arg1 ...inter
 }
 
 // PromptOptInIfNeeded mocks base method
-func (m *MockAnalyticsClient) PromptOptIn() error {
-	ret := m.ctrl.Call(m, "PromptOptInIfNeeded")
+func (m *MockAnalyticsClient) PromptOptInIfNeeded(arg0 string) error {
+	ret := m.ctrl.Call(m, "PromptOptInIfNeeded", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PromptOptInIfNeeded indicates an expected call of PromptOptInIfNeeded
-func (mr *MockAnalyticsClientMockRecorder) PromptOptIn() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptOptInIfNeeded", reflect.TypeOf((*MockAnalyticsClient)(nil).PromptOptIn))
+func (mr *MockAnalyticsClientMockRecorder) PromptOptInIfNeeded(arg0 interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptOptInIfNeeded", reflect.TypeOf((*MockAnalyticsClient)(nil).PromptOptInIfNeeded), arg0)
 }
