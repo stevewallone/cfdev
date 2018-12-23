@@ -38,7 +38,8 @@ CF Dev is a new distribution of Cloud Foundry designed to run on a developer’s
 1. Install the CF Dev plugin `cf install-plugin -r CF-Community "cfdev"`.
 
 ## Start
-Run CF Dev `cf dev start`.
+Run CF Dev `cf dev start`.<br>
+Please note, starting cfdev takes a while. Make sure your computer does not sleep during startup. See issue #66 for further information.
 
 
 ## Run BOSH with CF Dev
